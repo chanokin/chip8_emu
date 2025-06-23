@@ -3,7 +3,9 @@ use crate::constants::{
     DISPLAY_HEIGHT,
 };
 
-// todo: implement with bitfields
+use crate::errors::DisplayError;
+
+// todo: implement with bit-fields (maybe?)
 pub struct Display {
     pixels: [[bool; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
 }
@@ -23,18 +25,34 @@ impl Display {
         }
     }
 
-    pub fn set_pixel(&mut self, x: usize, y: usize, value: bool) {
-        if x < DISPLAY_WIDTH && y < DISPLAY_HEIGHT {
-            self.pixels[y][x] = value;
+    pub fn set_pixel(&mut self, x: usize, y: usize, value: bool) -> Result<(), DisplayError> {
+        if x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT {
+            return Err(DisplayError::CoordinateError(x, y));
         }
+
+        self.pixels[y][x] = value;
+
+        Ok(())
     }
 
-    pub fn get_pixel(&self, x: usize, y: usize) -> bool {
-        if x < DISPLAY_WIDTH && y < DISPLAY_HEIGHT {
-            self.pixels[y][x]
-        } else {
-            false
+    pub fn get_pixel(&self, x: usize, y: usize) -> Result<bool, DisplayError> {
+        if x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT {
+            return Err(DisplayError::CoordinateError(x, y));
         }
+
+        Ok(self.pixels[y][x])
+
+    }
+
+    pub fn flip_pixel(&mut self, x: usize, y: usize) -> Result<bool, DisplayError> {
+        if x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT {
+            return Err(DisplayError::CoordinateError(x, y));
+        }
+
+        let current_value = self.pixels[y][x];
+        self.pixels[y][x] = !current_value;
+
+        Ok(!current_value)
     }
 
 }
