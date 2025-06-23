@@ -1,5 +1,6 @@
 pub mod constants;
 pub mod font;
+pub mod errors;
 mod ram;
 mod stack;
 mod registers;

@@ -1,4 +1,8 @@
 
+// fonts are supposed to be 4 pixels wide and 5 pixels tall
+// each byte is a row of pixels
+// the 4 most significant bits represent pixels, the 4 least significant bits are unused
+// we have 16 characters representing the hexadecimal digits 0-9 and A-F
 pub static FONT: [[u8; 5]; 16] = [
     [
         0b11100000,
