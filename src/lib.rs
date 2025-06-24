@@ -6,11 +6,13 @@ mod stack;
 mod registers;
 mod machine;
 mod display;
+mod cpu;
 
-pub use crate::ram::Ram;
+pub use ram::Ram;
 pub use registers::Registers;
-pub use crate::stack::Stack;
-pub use crate::display::Display;
-pub use crate::machine::Machine;
+pub use stack::Stack;
+pub use display::Display;
+pub use machine::Machine;
+pub use cpu::Cpu;
 
 

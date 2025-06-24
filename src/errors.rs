@@ -25,3 +25,19 @@ impl Display for DisplayError {
         }
     }
 }
+
+
+#[derive(Debug)]
+pub enum CpuError {
+    InvalidOpcode(u8),
+    RegisterOutOfBounds(usize),
+}
+
+impl Display for CpuError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CpuError::InvalidOpcode(opcode) => write!(f, "Invalid opcode: {:#04x}", opcode),
+            CpuError::RegisterOutOfBounds(index) => write!(f, "Register index out of bounds: {}", index),
+        }
+    }
+}
