@@ -1,8 +1,13 @@
 use crate::constants::{
+    ProgramCounterType,
     CodeCategories,
+    PROGRAM_COUNTER_START,
 };
 use crate::errors::CpuError;
 use crate::registers::Registers;
+use crate::gpu::Gpu;
+use crate::ram::Ram;
+use crate::stack::Stack;
 pub struct Decoder;
 
 
@@ -60,19 +65,40 @@ impl Decoder {
 
 pub struct Cpu {
     decoder: Decoder,
+    program_counter: ProgramCounterType,
     registers: Registers,
+    display: Box<Option<Gpu>>,
+    ram: Box<Option<Ram>>,
+    stack: Box<Option<Stack>>
 }
 
 impl Cpu {
     pub fn new() -> Self {
         Cpu {
             decoder: Decoder::new(),
+            program_counter: PROGRAM_COUNTER_START, // CHIP-8 programs typically start at 0x200
             registers: Registers::new(),
+            display: Box::new(None), // Display can be set later
+            ram: Box::new(None), // RAM can be set later
+            stack: Box::new(None), // Stack can be set later
+
+        }
+    }
+
+    pub fn with_shared_objects(display: Gpu, ram: Ram, stack: Stack) -> Self {
+        Cpu {
+            decoder: Decoder::new(),
+            program_counter: PROGRAM_COUNTER_START, // CHIP-8 programs typically start at 0x200
+            registers: Registers::new(),
+            display: Box::new(Some(display)),
+            ram: Box::new(Some(ram)),
+            stack: Box::new(Some(stack)), // Stack can be set later
         }
     }
 
     pub fn reset(&mut self) {
         // Reset CPU state
+        self.program_counter = PROGRAM_COUNTER_START; // Reset program counter to start
     }
 
     pub fn decode(&self, instruction: u16) -> (u8, u16) {
@@ -127,7 +153,7 @@ impl Cpu {
     fn zero(&mut self, args: u16) -> Result<(), CpuError> {
         match args {
             0x00E0 => self.clear_display(), // Clear the display
-            0x00EE => self.return_from_subroutine(), // Return from subroutine
+            0x00EE => self.return_from_subroutine(), // Return from subroutine (pop from stack)
             _ => self.call_routine_at(args), // Call a subroutine at the given address
         }
     }
@@ -135,6 +161,7 @@ impl Cpu {
     fn jump_to(&mut self, address: u16) -> Result<(), CpuError> {
         // Jump to the specified address
         // This would typically set the program counter to the address
+        self.program_counter = address;
         Ok(())
     }
 
@@ -147,6 +174,10 @@ impl Cpu {
     }
 
     fn clear_display(&mut self,) -> Result<(), CpuError> {
+        let _ = match &mut *self.display {
+            Some(display) => display.clear(),
+            None => return Err(CpuError::ClearDisplay), // Display not initialized
+        };
         Ok(())
     }
 

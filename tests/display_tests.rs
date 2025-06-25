@@ -1,4 +1,4 @@
-use chip8_emu::Display;
+use chip8_emu::Gpu;
 use chip8_emu::constants::{DISPLAY_WIDTH, DISPLAY_HEIGHT};
 
 #[cfg(test)]
@@ -9,7 +9,7 @@ mod tests {
     #[test]
     fn display_initialization() {
         let ram = chip8_emu::Ram::new();
-        let display = Display::with_ram(ram);
+        let display = Gpu::with_ram(ram);
         for y in 0..DISPLAY_HEIGHT {
             for x in 0..DISPLAY_WIDTH {
                 let pixel_value = display.get_pixel(x, y);
@@ -23,7 +23,7 @@ mod tests {
     #[test]
     fn display_set_pixel() {
         let ram = chip8_emu::Ram::new();
-        let mut display = Display::with_ram(ram);
+        let mut display = Gpu::with_ram(ram);
 
         display.set_pixel(0, 0, true).expect("Failed to set pixel at (0, 0) to true");
         let value = display.get_pixel(0, 0).expect("Failed to get pixel at (0, 0)");
@@ -33,7 +33,7 @@ mod tests {
     #[test]
     fn display_clear() {
         let ram = chip8_emu::Ram::new();
-        let mut display = Display::with_ram(ram);
+        let mut display = Gpu::with_ram(ram);
         display.set_pixel(0, 0, true).expect("Failed to set pixel at (0, 0) to true");
 
         display.clear();
@@ -45,7 +45,7 @@ mod tests {
     #[test]
     fn display_flip_pixel() {
         let ram = chip8_emu::Ram::new();
-        let mut display = Display::with_ram(ram);
+        let mut display = Gpu::with_ram(ram);
         display.set_pixel(0, 0, true).expect("Failed to set pixel at (0, 0) to true");
         let flipped_value = display.flip_pixel(0, 0).expect("Failed to flip pixel at (0, 0)");
         assert_eq!(flipped_value, false, "Flipped pixel at (0, 0) should be false");

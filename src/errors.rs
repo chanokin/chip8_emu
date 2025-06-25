@@ -41,6 +41,7 @@ impl Display for DisplayError {
 pub enum CpuError {
     InvalidOpcode(u8),
     RegisterOutOfBounds(usize),
+    ClearDisplay,
 }
 
 impl Display for CpuError {
@@ -48,6 +49,7 @@ impl Display for CpuError {
         match self {
             CpuError::InvalidOpcode(opcode) => write!(f, "Invalid opcode: {:#04x}", opcode),
             CpuError::RegisterOutOfBounds(index) => write!(f, "Register index out of bounds: {}", index),
+            CpuError::ClearDisplay => write!(f, "Failed to clear display"),
         }
     }
 }

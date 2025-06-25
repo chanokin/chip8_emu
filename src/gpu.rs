@@ -10,7 +10,7 @@ use crate::constants::{
 use crate::errors::DisplayError;
 use crate::ram::Ram;
 
-pub struct Display {
+pub struct Gpu {
     // pixels: [bool; DISPLAY_WIDTH * DISPLAY_HEIGHT],
     ram: Box<Option<Ram>>,
 }
@@ -32,15 +32,15 @@ pub fn coord_to_indices(x: usize, y: usize) -> Result<(usize, usize), DisplayErr
     Ok((byte_index, bit_index))
 }
 
-impl Display {
+impl Gpu {
     pub fn new() -> Self {
-        Display {
+        Gpu {
             ram: Box::new(None),
         }
     }
 
     pub fn with_ram(ram: Ram) -> Self {
-        Display {
+        Gpu {
             ram: Box::new(Some(ram)),
         }
     }
