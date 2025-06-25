@@ -18,8 +18,11 @@ pub static STACK_MASK: u16 = 0x0FFF; // 12-bit address mask
 pub static INDEX_REGISTER_MASK: u16 = 0x0FFF; // 12-bit address mask for index register
 
 pub static DISPLAY_FREQUENCY: u64 = 60; // 60Hz for the CHIP-8 emulator
+pub static DISPLAY_COLS_PER_CELL: usize = 8; // Each pixel is represented by a bit in a byte
+pub static DISPLAY_ROWS_PER_CELL: usize = 1; // Each pixel is represented by a bit in a byte
+pub static DISPLAY_CELLS_PER_ROW: usize = DISPLAY_WIDTH / DISPLAY_COLS_PER_CELL; // Number of cells in a row
 pub static DISPLAY_START_ADDRESS: usize = 0xF00; // Display memory starts at 0xF00
-pub static DISPLAY_END_ADDRESS: usize = 0xFFF; // Display memory ends at 0xFFF
+pub static DISPLAY_END_ADDRESS: usize = DISPLAY_START_ADDRESS + DISPLAY_HEIGHT * DISPLAY_WIDTH / DISPLAY_COLS_PER_CELL; // Display memory ends at 0xFFF
 
 pub static FONT_START_ADDRESS: usize = 0x050; // 80 in decimal
 pub static FONT_END_ADDRESS: usize = 0x0A0; // 160 in decimal

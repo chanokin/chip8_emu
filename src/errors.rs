@@ -15,6 +15,11 @@ pub enum MemoryError {
 pub enum DisplayError {
     OutOfBounds,
     CoordinateError(usize, usize),
+    SetPixelError(usize, usize),
+    GetPixelError(usize, usize),
+    FlipPixelError(usize, usize),
+    MemoryNotInitialized,
+    ClearFailed,
 }
 
 impl Display for DisplayError {
@@ -22,6 +27,11 @@ impl Display for DisplayError {
         match self {
             DisplayError::OutOfBounds => write!(f, "Display coordinates are out of bounds"),
             DisplayError::CoordinateError(x, y) => write!(f, "Invalid coordinates: ({}, {})", x, y),
+            DisplayError::MemoryNotInitialized => write!(f, "Display memory is not initialized"),
+            DisplayError::ClearFailed => write!(f, "Failed to clear display memory"),
+            DisplayError::SetPixelError(x, y) => write!(f, "Failed to set pixel at ({}, {})", x, y),
+            DisplayError::GetPixelError(x, y) => write!(f, "Failed to get pixel at ({}, {})", x, y),
+            DisplayError::FlipPixelError(x, y) => write!(f, "Failed to flip pixel at ({}, {})", x, y),
         }
     }
 }
