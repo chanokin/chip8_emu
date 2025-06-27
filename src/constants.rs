@@ -41,3 +41,36 @@ pub enum CodeCategories {
     XNN, // 8-bit value and a number
     XYN, // 8-bit value and a number
 }
+
+#[derive(Clone,Copy,Debug,PartialEq,Eq)]
+pub struct OpCodes(u8);
+
+#[allow(non_upper_case_globals)]
+impl OpCodes {
+    pub const Zero:OpCodes = OpCodes(0x0);
+    pub const Jump:OpCodes = OpCodes(0x1);
+    pub const Subroutine:OpCodes = OpCodes(0x2);
+    pub const CondRegValEq:OpCodes = OpCodes(0x3);
+    pub const CondRegValNEq:OpCodes = OpCodes(0x4);
+    pub const CondRegRegEq:OpCodes = OpCodes(0x5);
+    pub const SetRegister:OpCodes = OpCodes(0x6);
+    pub const AddToRegister:OpCodes = OpCodes(0x7);
+    pub const RegisterOperations:OpCodes = OpCodes(0x8);
+    pub const CondRegRegNEq:OpCodes = OpCodes(0x9);
+    pub const SetIndex:OpCodes = OpCodes(0xA);
+    pub const JumpWithOffset:OpCodes = OpCodes(0xB);
+    pub const Random:OpCodes = OpCodes(0xC);
+    pub const Draw:OpCodes = OpCodes(0xD);
+    pub const KeyOperations:OpCodes = OpCodes(0xE);
+    pub const MemoryOperations:OpCodes = OpCodes(0xF);
+}
+
+
+#[derive(Clone,Copy,Debug,PartialEq,Eq)]
+pub struct FunctionCodes(u16);
+
+#[allow(non_upper_case_globals)]
+impl FunctionCodes {
+    pub const ClearDisplay:FunctionCodes = FunctionCodes(0x00E0);
+    pub const ReturnFromSubroutine:FunctionCodes = FunctionCodes(0x00EE);
+}

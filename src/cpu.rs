@@ -1,6 +1,8 @@
 use crate::constants::{
     ProgramCounterType,
     CodeCategories,
+    OpCodes,
+    FunctionCodes,
     PROGRAM_COUNTER_START,
 };
 use crate::errors::CpuError;
@@ -124,10 +126,10 @@ impl Cpu {
 
 
     pub fn nnn(&mut self, opcode: u8, args: u16) -> Result<(), CpuError> {
-        match opcode {
-            0x0 => self.zero(args),
-            0x1 => self.jump_to(args),
-            0xA => self.set_index_register(args),
+        match OpCodes(opcode) {
+            OpCodes::Zero => self.zero(args),
+            OpCodes::Jump => self.jump_to(args),
+            OpCodes::SetIndex => self.set_index_register(args),
             _ => Err(CpuError::InvalidOpcode(opcode)),
         }
 
@@ -136,8 +138,8 @@ impl Cpu {
     pub fn xnn(&mut self, opcode: u8, args: u16) -> Result<(), CpuError> {
         let (register, number) = self.decoder.xnn(args);
         match opcode {
-            0x6 => self.set_register(register as usize, number),
-            0x7 => self.add_to_register(register as usize, number),
+            OpCodes::SetRegister => self.set_register(register as usize, number),
+            OpCodes::AddToRegister => self.add_to_register(register as usize, number),
             _ => Err(CpuError::InvalidOpcode(opcode)),
         }
     }
@@ -145,15 +147,15 @@ impl Cpu {
     pub fn xyn(&mut self, opcode: u8, args: u16) -> Result<(), CpuError> {
         let (register_0, register_1, number) = self.decoder.xyn(args);
         match opcode {
-            0xD => self.draw_sprite_at(register_0, register_1, number),
+            OpCodes::Draw => self.draw_sprite_at(register_0, register_1, number),
             _ => Err(CpuError::InvalidOpcode(opcode)),
         }
     }
 
     fn zero(&mut self, args: u16) -> Result<(), CpuError> {
         match args {
-            0x00E0 => self.clear_display(), // Clear the display
-            0x00EE => self.return_from_subroutine(), // Return from subroutine (pop from stack)
+            FunctionCodes::ClearDisplay => self.clear_display(), // Clear the display
+            FunctionCodes::ReturnFromSubroutine => self.return_from_subroutine(), // Return from subroutine (pop from stack)
             _ => self.call_routine_at(args), // Call a subroutine at the given address
         }
     }
