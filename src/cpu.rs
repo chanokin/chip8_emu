@@ -4,6 +4,7 @@ use crate::constants::{
     OpCodes,
     FunctionCodes,
     PROGRAM_COUNTER_START,
+    DISPLAY_START_ADDRESS,
 };
 use crate::errors::CpuError;
 use crate::registers::Registers;
@@ -136,7 +137,10 @@ impl Cpu {
     }
 
     pub fn xnn(&mut self, opcode: u8, args: u16) -> Result<(), CpuError> {
+        // Extract the register and number from the arguments
         let (register, number) = self.decoder.xnn(args);
+
+        // execute the instruction based on the opcode
         match OpCodes(opcode) {
             OpCodes::SetRegister => self.set_register(register as usize, number),
             OpCodes::AddToRegister => self.add_to_register(register as usize, number),
@@ -145,7 +149,10 @@ impl Cpu {
     }
 
     pub fn xyn(&mut self, opcode: u8, args: u16) -> Result<(), CpuError> {
+        // Extract the two registers and the number from the arguments
         let (register_0, register_1, number) = self.decoder.xyn(args);
+
+        // execute the instruction based on the opcode
         match OpCodes(opcode) {
             OpCodes::Draw => self.draw_sprite_at(register_0, register_1, number),
             _ => Err(CpuError::InvalidOpcode(opcode)),
@@ -163,7 +170,13 @@ impl Cpu {
     fn jump_to(&mut self, address: u16) -> Result<(), CpuError> {
         // Jump to the specified address
         // This would typically set the program counter to the address
+        if address < PROGRAM_COUNTER_START || address >= DISPLAY_START_ADDRESS as u16 {
+            return Err(CpuError::InvalidJump(address)); // Invalid address for program counter
+        }
+
+        // just set, don't increment
         self.program_counter = address;
+
         Ok(())
     }
 
@@ -184,22 +197,27 @@ impl Cpu {
     }
 
     fn set_register(&mut self, index: usize, value: u8) -> Result<(), CpuError> {
-        if self.registers.set(index, value).is_err() {
-            return Err(CpuError::RegisterOutOfBounds(index));
+        match self.registers.set(index, value) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(CpuError::SetRegisterError(index)), // translate error to CpuError
         }
-
-        Ok(())
     }
 
     fn add_to_register(&mut self, index: usize, value: u8) -> Result<(), CpuError> {
-        if let Ok(register_value) = self.registers.get(index) {
-            let new_value: u16 = (register_value as u16) + (value as u16);
-            if new_value > 0xFF {
+        let register_value = match self.registers.get(index) {
+            Ok(val) => val,
+            Err(_) => return Err(CpuError::GetRegisterError(index)),
+        };
 
-            }
+        // seems overflow is not handled in the original code
+        let new_value: u16 = (register_value as u16) + (value as u16);
+        let new_value: u8 = (new_value & 0xFF) as u8;
+
+        // Set the new value in the register
+        match self.registers.set(index, new_value) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(CpuError::SetRegisterError(index)), // translate error to CpuError
         }
-        // Add the value to the register here
-        Ok(())
     }
 
     fn set_index_register(&mut self, address: u16) -> Result<(), CpuError> {

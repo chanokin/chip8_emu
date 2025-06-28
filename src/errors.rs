@@ -42,6 +42,9 @@ pub enum CpuError {
     InvalidOpcode(u8),
     RegisterOutOfBounds(usize),
     ClearDisplay,
+    GetRegisterError(usize),
+    SetRegisterError(usize),
+    InvalidJump(u16),
 }
 
 impl Display for CpuError {
@@ -50,6 +53,9 @@ impl Display for CpuError {
             CpuError::InvalidOpcode(opcode) => write!(f, "Invalid opcode: {:#04x}", opcode),
             CpuError::RegisterOutOfBounds(index) => write!(f, "Register index out of bounds: {}", index),
             CpuError::ClearDisplay => write!(f, "Failed to clear display"),
+            CpuError::GetRegisterError(index) => write!(f, "Failed to get register at index: {}", index),
+            CpuError::SetRegisterError(index) => write!(f, "Failed to set register at index: {}", index),
+            CpuError::InvalidJump(address) => write!(f, "Invalid jump address: {:#04x}", address),
         }
     }
 }
