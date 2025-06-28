@@ -43,7 +43,7 @@ pub enum CodeCategories {
 }
 
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
-pub struct OpCodes(u8);
+pub struct OpCodes(pub u8);
 
 #[allow(non_upper_case_globals)]
 impl OpCodes {
@@ -67,7 +67,7 @@ impl OpCodes {
 
 
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
-pub struct FunctionCodes(u16);
+pub struct FunctionCodes(pub u16);
 
 #[allow(non_upper_case_globals)]
 impl FunctionCodes {

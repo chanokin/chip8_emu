@@ -126,7 +126,7 @@ impl Cpu {
 
 
     pub fn nnn(&mut self, opcode: u8, args: u16) -> Result<(), CpuError> {
-        match OpCodes(opcode) {
+        match OpCodes(opcode)  {
             OpCodes::Zero => self.zero(args),
             OpCodes::Jump => self.jump_to(args),
             OpCodes::SetIndex => self.set_index_register(args),
@@ -137,7 +137,7 @@ impl Cpu {
 
     pub fn xnn(&mut self, opcode: u8, args: u16) -> Result<(), CpuError> {
         let (register, number) = self.decoder.xnn(args);
-        match opcode {
+        match OpCodes(opcode) {
             OpCodes::SetRegister => self.set_register(register as usize, number),
             OpCodes::AddToRegister => self.add_to_register(register as usize, number),
             _ => Err(CpuError::InvalidOpcode(opcode)),
@@ -146,14 +146,14 @@ impl Cpu {
 
     pub fn xyn(&mut self, opcode: u8, args: u16) -> Result<(), CpuError> {
         let (register_0, register_1, number) = self.decoder.xyn(args);
-        match opcode {
+        match OpCodes(opcode) {
             OpCodes::Draw => self.draw_sprite_at(register_0, register_1, number),
             _ => Err(CpuError::InvalidOpcode(opcode)),
         }
     }
 
     fn zero(&mut self, args: u16) -> Result<(), CpuError> {
-        match args {
+        match FunctionCodes(args) {
             FunctionCodes::ClearDisplay => self.clear_display(), // Clear the display
             FunctionCodes::ReturnFromSubroutine => self.return_from_subroutine(), // Return from subroutine (pop from stack)
             _ => self.call_routine_at(args), // Call a subroutine at the given address
