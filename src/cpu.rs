@@ -1,5 +1,6 @@
 use crate::constants::{
     ProgramCounterType,
+    IndexRegisterType,
     CodeCategories,
     OpCodes,
     FunctionCodes,
@@ -70,9 +71,8 @@ pub struct Cpu {
     decoder: Decoder,
     program_counter: ProgramCounterType,
     registers: Registers,
-    display: Box<Option<Gpu>>,
-    ram: Box<Option<Ram>>,
-    stack: Box<Option<Stack>>
+    index_register: IndexRegisterType,
+    stack: Stack,
 }
 
 impl Cpu {
@@ -81,21 +81,8 @@ impl Cpu {
             decoder: Decoder::new(),
             program_counter: PROGRAM_COUNTER_START, // CHIP-8 programs typically start at 0x200
             registers: Registers::new(),
-            display: Box::new(None), // Display can be set later
-            ram: Box::new(None), // RAM can be set later
-            stack: Box::new(None), // Stack can be set later
-
-        }
-    }
-
-    pub fn with_shared_objects(display: Gpu, ram: Ram, stack: Stack) -> Self {
-        Cpu {
-            decoder: Decoder::new(),
-            program_counter: PROGRAM_COUNTER_START, // CHIP-8 programs typically start at 0x200
-            registers: Registers::new(),
-            display: Box::new(Some(display)),
-            ram: Box::new(Some(ram)),
-            stack: Box::new(Some(stack)), // Stack can be set later
+            index_register: 0, // Initialize index register to 0
+            stack: Stack::new(), // Stack can be set later
         }
     }
 
@@ -111,24 +98,24 @@ impl Cpu {
         (opcode, args)
     }
 
-    pub fn execute(&mut self, opcode: u8, args: u16) -> Result<(), CpuError> {
+    pub fn execute(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         let category = match self.decoder.extraction_category(opcode) {
             Ok(cat) => cat,
             Err(e) => return Err(e),
         };
 
         match category {
-            CodeCategories::NNN => self.nnn(opcode, args),
-            CodeCategories::XNN => self.xnn(opcode, args),
-            _ => self.xyn(opcode, args),
+            CodeCategories::NNN => self.nnn(opcode, args, gpu, ram),
+            CodeCategories::XNN => self.xnn(opcode, args, gpu, ram),
+            _ => self.xyn(opcode, args, gpu, ram),
         }
     }
 
 
 
-    pub fn nnn(&mut self, opcode: u8, args: u16) -> Result<(), CpuError> {
+    pub fn nnn(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         match OpCodes(opcode)  {
-            OpCodes::Zero => self.zero(args),
+            OpCodes::Zero => self.zero(args, gpu, ram),
             OpCodes::Jump => self.jump_to(args),
             OpCodes::SetIndex => self.set_index_register(args),
             _ => Err(CpuError::InvalidOpcode(opcode)),
@@ -136,7 +123,7 @@ impl Cpu {
 
     }
 
-    pub fn xnn(&mut self, opcode: u8, args: u16) -> Result<(), CpuError> {
+    pub fn xnn(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         // Extract the register and number from the arguments
         let (register, number) = self.decoder.xnn(args);
 
@@ -148,7 +135,7 @@ impl Cpu {
         }
     }
 
-    pub fn xyn(&mut self, opcode: u8, args: u16) -> Result<(), CpuError> {
+    pub fn xyn(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         // Extract the two registers and the number from the arguments
         let (register_0, register_1, number) = self.decoder.xyn(args);
 
@@ -159,9 +146,9 @@ impl Cpu {
         }
     }
 
-    fn zero(&mut self, args: u16) -> Result<(), CpuError> {
+    fn zero(&mut self, args: u16, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         match FunctionCodes(args) {
-            FunctionCodes::ClearDisplay => self.clear_display(), // Clear the display
+            FunctionCodes::ClearDisplay => self.clear_display(gpu, ram), // Clear the display
             FunctionCodes::ReturnFromSubroutine => self.return_from_subroutine(), // Return from subroutine (pop from stack)
             _ => self.call_routine_at(args), // Call a subroutine at the given address
         }
@@ -181,19 +168,37 @@ impl Cpu {
     }
 
     fn return_from_subroutine(&mut self) -> Result<(), CpuError> {
-        Ok(())
+        // Return from a subroutine by popping the address from the stack
+        if self.stack.is_empty() {
+            return Err(CpuError::StackNotInitialized); // Handle empty stack error
+        }
+
+        match self.stack.pop() {
+            Ok(_) => Ok(()),
+            Err(e) => Err(CpuError::StackPopError(e)), // Handle stack pop error
+        }
     }
 
     fn call_routine_at(&mut self, address: u16) -> Result<(), CpuError> {
+        // Set the program counter to the address
+        if address < PROGRAM_COUNTER_START || address >= DISPLAY_START_ADDRESS as u16 {
+            return Err(CpuError::InvalidJump(address)); // Invalid address for program counter
+        }
+
+        if let Err(e) = self.stack.push(self.program_counter) {
+            return Err(CpuError::StackPushError(e)); // Handle stack push error
+        }
+
+        self.program_counter = address;
+
         Ok(())
     }
 
-    fn clear_display(&mut self,) -> Result<(), CpuError> {
-        let _ = match &mut *self.display {
-            Some(display) => display.clear(),
-            None => return Err(CpuError::ClearDisplay), // Display not initialized
-        };
-        Ok(())
+    fn clear_display(&mut self, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
+        match gpu.clear(ram) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(CpuError::ClearDisplay), // translate error to CpuError
+        }
     }
 
     fn set_register(&mut self, index: usize, value: u8) -> Result<(), CpuError> {
@@ -222,7 +227,12 @@ impl Cpu {
 
     fn set_index_register(&mut self, address: u16) -> Result<(), CpuError> {
         // Set the index register to the specified address
-        // This would typically set the index register to the address
+        if  address >= DISPLAY_START_ADDRESS as u16 {
+            return Err(CpuError::InvalidJump(address)); // Invalid address for index register
+        }
+
+        self.index_register = (address & 0x0FFF) as IndexRegisterType; // Ensure it's a 12-bit address
+
         Ok(())
     }
 

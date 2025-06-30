@@ -7,6 +7,7 @@ pub static VARIABLE_REGISTERS_SIZE: usize = 16;
 pub static CARRY_FLAG_ADDRESS: u8 = 15; // i.e. VARIABLE_REGISTERS_SIZE - 1
 
 pub type MemoryType = u8;
+pub type AddressType = u16; // these should be 12-bit addresses
 pub type StackType = u16;
 pub type ProgramCounterType = u16; // these should be 12-bit addresses
 pub type IndexRegisterType = u16; // these should be 12-bit addresses

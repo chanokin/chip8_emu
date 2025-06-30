@@ -2,8 +2,6 @@ use crate::ram::Ram;
 use crate::cpu::Cpu;
 use crate::gpu::Gpu;
 use crate::constants::{
-    ProgramCounterType,
-    IndexRegisterType,
     DelayTimerType,
     SoundTimerType,
 
@@ -15,36 +13,36 @@ pub struct Machine {
     pub stack: Stack,
     pub gpu: Gpu,
     pub cpu: Cpu,
-    pub index_register: IndexRegisterType,
     pub delay_timer: DelayTimerType,
     pub sound_timer: SoundTimerType,
 }
 
 impl Machine {
     pub fn new() -> Self {
+        let ram = Ram::new();
+        let stack = Stack::new();
+        let gpu = Gpu::new();
+        let cpu = Cpu::new();
         let mut machine = Machine {
-            ram: Ram::new(),
-            stack: Stack::new(),
-            gpu: Gpu::new(),
-            cpu: Cpu::new(),
-            index_register: 0,
+            ram,
+            stack,
+            gpu,
+            cpu,
             delay_timer: 0,
             sound_timer: 0,
         };
 
         machine.load_font();
-        machine.link_ram_to_cpu();
-        machine.link_ram_to_display();
         machine.reset();
+
         machine
     }
 
     pub fn reset(&mut self) {
         self.ram.reset();
-        self.index_register = 0;
         self.delay_timer = 0;
         self.sound_timer = 0;
-        self.stack = Stack::new();
+        self.stack.reset();
     }
 
     pub fn load_font(&mut self) {

@@ -10,10 +10,7 @@ use crate::constants::{
 use crate::errors::DisplayError;
 use crate::ram::Ram;
 
-pub struct Gpu {
-    // pixels: [bool; DISPLAY_WIDTH * DISPLAY_HEIGHT],
-    ram: Box<Option<Ram>>,
-}
+pub struct Gpu;
 
 pub fn coord_to_indices(x: usize, y: usize) -> Result<(usize, usize), DisplayError> {
     if x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT {
@@ -33,28 +30,20 @@ pub fn coord_to_indices(x: usize, y: usize) -> Result<(usize, usize), DisplayErr
 }
 
 impl Gpu {
+
     pub fn new() -> Self {
-        Gpu {
-            ram: Box::new(None),
-        }
+        Gpu{}
     }
 
-    pub fn with_ram(ram: Ram) -> Self {
-        Gpu {
-            ram: Box::new(Some(ram)),
-        }
+    pub fn reset(&mut self, ram: &mut Ram) -> Result<(), DisplayError> {
+        self.clear(ram)?;
+
+        Ok(())
     }
 
-
-
-    pub fn clear(&mut self) -> Result<(), DisplayError> {
-        let mut _ram = match &mut *self.ram {
-            Some(ram) => ram,
-            None => return Err(DisplayError::MemoryNotInitialized),
-        };
-
+    pub fn clear(&mut self, ram: &mut Ram) -> Result<(), DisplayError> {
         for index in  DISPLAY_START_ADDRESS..DISPLAY_END_ADDRESS {
-            let _result = _ram.set(index, 0);
+            let _result = ram.set(index, 0);
             if _result.is_err() {
                 return Err(DisplayError::ClearFailed);
             }
@@ -64,15 +53,10 @@ impl Gpu {
 
     }
 
-    pub fn set_pixel(&mut self, x: usize, y: usize, value: bool) -> Result<(), DisplayError> {
+    pub fn set_pixel(&mut self, x: usize, y: usize, value: bool, ram: &mut Ram) -> Result<(), DisplayError> {
         if x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT {
             return Err(DisplayError::CoordinateError(x, y));
         }
-
-        let ram = match &mut *self.ram {
-            Some(ram) => ram,
-            None => return Err(DisplayError::MemoryNotInitialized),
-        };
 
         let (byte_index, bit_index) = coord_to_indices(x, y)?;
 
@@ -93,15 +77,10 @@ impl Gpu {
         }
     }
 
-    pub fn get_pixel(&self, x: usize, y: usize) -> Result<bool, DisplayError> {
+    pub fn get_pixel(&self, x: usize, y: usize, ram: &Ram) -> Result<bool, DisplayError> {
         if x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT {
             return Err(DisplayError::CoordinateError(x, y));
         }
-
-        let ram = match &*self.ram {
-            Some(ram) => ram,
-            None => return Err(DisplayError::MemoryNotInitialized),
-        };
 
         let (byte_index, bit_index) = coord_to_indices(x, y)?;
 
@@ -110,20 +89,20 @@ impl Gpu {
             Err(_) => return Err(DisplayError::GetPixelError(x, y)),
         };
 
-        let pixel_value = current_value >> bit_index;
+        let pixel_value = (current_value >> bit_index) & 1;
 
-        Ok(pixel_value == 1)
+        Ok(pixel_value != 0)
 
     }
 
-    pub fn flip_pixel(&mut self, x: usize, y: usize) -> Result<bool, DisplayError> {
+    pub fn flip_pixel(&mut self, x: usize, y: usize, ram: &mut Ram) -> Result<bool, DisplayError> {
         if x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT {
             return Err(DisplayError::CoordinateError(x, y));
         }
 
-        let current_value = self.get_pixel(x, y)?;
+        let current_value = self.get_pixel(x, y, ram)?;
 
-        self.set_pixel(x, y, !current_value)?;
+        self.set_pixel(x, y, !current_value, ram)?;
 
         Ok(!current_value)
     }

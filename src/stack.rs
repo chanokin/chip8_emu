@@ -67,4 +67,8 @@ impl Stack {
         self.stack_pointer = 0;
     }
 
+    pub fn reset(&mut self) {
+        self.clear();
+    }
+
 }
