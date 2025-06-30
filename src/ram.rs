@@ -29,6 +29,18 @@ impl Ram {
         Ok(self.memory[address])
     }
 
+    pub fn get_range(&self, address: usize, size: usize) -> Result<Vec<MemoryType>, MemoryError> {
+        if address >= MEMORY_SIZE {
+            return Err(MemoryError::OutOfBounds);
+        }
+
+        if address + size > MEMORY_SIZE {
+            return Err(MemoryError::OutOfBounds);
+        }
+
+        Ok(self.memory[address..address + size].to_vec())
+    }
+
     pub fn set(&mut self, address: usize, value: MemoryType) -> Result<(), MemoryError> {
         if address >= MEMORY_SIZE {
             return Err(MemoryError::OutOfBounds);

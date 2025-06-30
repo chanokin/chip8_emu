@@ -4,11 +4,13 @@ use std::fmt::Display;
 pub enum StackError {
     Underflow,
     Overflow,
+    NotInitialized,
 }
 
 #[derive(Debug)]
 pub enum MemoryError {
     OutOfBounds,
+    NotInitialized,
 }
 
 #[derive(Debug)]
@@ -48,6 +50,8 @@ pub enum CpuError {
     StackPushError(StackError),
     StackPopError(StackError),
     StackNotInitialized,
+    DisplayError(DisplayError),
+    MemoryError(MemoryError),
 }
 
 impl Display for CpuError {
@@ -62,6 +66,9 @@ impl Display for CpuError {
             CpuError::StackPushError(error) => write!(f, "Stack push error: {:?}", error),
             CpuError::StackPopError(error) => write!(f, "Stack pop error: {:?}", error),
             CpuError::StackNotInitialized => write!(f, "Stack is not initialized"),
+            CpuError::DisplayError(error) => write!(f, "Display error: {}", error),
+            CpuError::MemoryError(error) => write!(f, "Memory error: {:?}", error),
+
         }
     }
 }

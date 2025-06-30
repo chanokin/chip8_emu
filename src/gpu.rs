@@ -53,7 +53,7 @@ impl Gpu {
 
     }
 
-    pub fn set_pixel(&mut self, x: usize, y: usize, value: bool, ram: &mut Ram) -> Result<(), DisplayError> {
+    pub fn set_pixel(&mut self, x: usize, y: usize, value: u8, ram: &mut Ram) -> Result<(), DisplayError> {
         if x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT {
             return Err(DisplayError::CoordinateError(x, y));
         }
@@ -65,7 +65,7 @@ impl Gpu {
             Err(_) => return Err(DisplayError::CoordinateError(x, y)),
         };
 
-        let new_value = if value {
+        let new_value = if value == 1{
             current_value | (1 << bit_index) // Set the pixel to 1
         } else {
             current_value & !(1 << bit_index) // Set the pixel to 0
@@ -77,7 +77,7 @@ impl Gpu {
         }
     }
 
-    pub fn get_pixel(&self, x: usize, y: usize, ram: &Ram) -> Result<bool, DisplayError> {
+    pub fn get_pixel(&self, x: usize, y: usize, ram: &Ram) -> Result<u8, DisplayError> {
         if x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT {
             return Err(DisplayError::CoordinateError(x, y));
         }
@@ -91,11 +91,10 @@ impl Gpu {
 
         let pixel_value = (current_value >> bit_index) & 1;
 
-        Ok(pixel_value != 0)
-
+        Ok(pixel_value)
     }
 
-    pub fn flip_pixel(&mut self, x: usize, y: usize, ram: &mut Ram) -> Result<bool, DisplayError> {
+    pub fn flip_pixel(&mut self, x: usize, y: usize, ram: &mut Ram) -> Result<u8, DisplayError> {
         if x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT {
             return Err(DisplayError::CoordinateError(x, y));
         }
@@ -105,6 +104,45 @@ impl Gpu {
         self.set_pixel(x, y, !current_value, ram)?;
 
         Ok(!current_value)
+    }
+
+    pub fn draw_sprite_at(&mut self, x: usize, y: usize, sprite: &[u8], ram: &mut Ram) -> Result<bool, DisplayError> {
+        // the bool in the return type indicates that we need to set VF as 1 because
+        // a screen pixel was on and the sprite pixel was also on
+
+        if sprite.is_empty() {
+            // return Ok(false); // No sprite to draw
+            return Err(DisplayError::MemoryNotInitialized);
+        }
+
+        if x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT {
+            return Err(DisplayError::CoordinateError(x, y));
+        }
+        let mut set_vf_to_true = false;
+        for (row_index, &byte) in sprite.iter().enumerate() {
+            for bit_index in 0..8 {
+                let sprite_pixel_value = (byte >> (7 - bit_index)) & 1;
+                let pixel_x = x + bit_index;
+                let pixel_y = y + row_index;
+
+                if pixel_x >= DISPLAY_WIDTH || pixel_y >= DISPLAY_HEIGHT {
+                    continue; // Skip out-of-bounds pixels
+                }
+
+                let current_pixel_value = self.get_pixel(pixel_x, pixel_y, ram)?;
+
+                if current_pixel_value > 0 && sprite_pixel_value == 1{
+                    // If the pixel is already set and we are trying to set it again, we will flip it
+                    self.flip_pixel(pixel_x, pixel_y, ram)?;
+                    set_vf_to_true = true; // Set VF to 1 because we flipped a pixel that was already on
+                } else {
+                    // Otherwise, we just set the pixel
+                    self.set_pixel(pixel_x, pixel_y, sprite_pixel_value, ram)?;
+                }
+            }
+        }
+
+        Ok(set_vf_to_true)
     }
 
 }

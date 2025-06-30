@@ -7,7 +7,11 @@ use crate::constants::{
     PROGRAM_COUNTER_START,
     DISPLAY_START_ADDRESS,
 };
-use crate::errors::CpuError;
+use crate::errors::{
+    CpuError,
+    DisplayError,
+    MemoryError,
+};
 use crate::registers::Registers;
 use crate::gpu::Gpu;
 use crate::ram::Ram;
@@ -141,7 +145,7 @@ impl Cpu {
 
         // execute the instruction based on the opcode
         match OpCodes(opcode) {
-            OpCodes::Draw => self.draw_sprite_at(register_0, register_1, number),
+            OpCodes::Draw => self.draw_sprite_at(register_0, register_1, number, gpu, ram),
             _ => Err(CpuError::InvalidOpcode(opcode)),
         }
     }
@@ -236,9 +240,23 @@ impl Cpu {
         Ok(())
     }
 
-    fn draw_sprite_at(&mut self, x: u8, y: u8, n: u8) -> Result<(), CpuError> {
+    fn draw_sprite_at(&mut self, x: u8, y: u8, sprite_height: u8, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         // Draw a sprite at the specified coordinates (x, y) with height n
         // This would typically involve accessing the display memory and drawing the sprite
+        let sprite_address = self.index_register as usize;
+        let sprite: Vec<u8> = match ram.get_range(sprite_address, sprite_height as usize) {
+            Ok(data) => data,
+            Err(e) => return Err(CpuError::MemoryError(e)), // Handle memory error
+        };
+
+        let set_vf_true = match gpu.draw_sprite_at(x as usize, y as usize, &sprite, ram) {
+            Ok(val) => val,
+            Err(e) => return Err(CpuError::DisplayError(e)), // Handle display error
+        };
+
+        // If the sprite was drawn and VF should be set to 1, we can set it in the registers
+        self.registers.set_carry_flag(set_vf_true as u8);
+
         Ok(())
     }
 
