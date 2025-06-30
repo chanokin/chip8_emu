@@ -64,9 +64,13 @@ mod tests {
 
         // Set a sprite in RAM
         let sprite_data = vec![0b1111_0000, 0b0000_1111]; // Example sprite
+        let address = 0x20;
+
+        let _ = ram.set_range(address, 2, sprite_data.as_slice())
+            .expect("Failed to set sprite data in RAM");
 
         // Draw the sprite at (0, 0)
-        display.draw_sprite_at(0, 0, &sprite_data, &mut ram).expect("Failed to draw sprite at (0, 0)");
+        display.draw_sprite_at(0, 0, address, 2, &mut ram).expect("Failed to draw sprite at (0, 0)");
 
         // Check first row
         assert_eq!(display.get_pixel(0, 0, &ram).unwrap(), 1);

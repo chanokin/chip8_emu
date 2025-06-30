@@ -7,7 +7,7 @@ use crate::errors::MemoryError;
 
 // Memory for the CHIP-8 emulator.
 pub struct Ram {
-    memory: [MemoryType; MEMORY_SIZE],
+    pub memory: [MemoryType; MEMORY_SIZE],
 }
 
 
@@ -39,6 +39,26 @@ impl Ram {
         }
 
         Ok(self.memory[address..address + size].to_vec())
+    }
+
+    pub fn set_range(&mut self, address: usize, size: usize, values: &[u8]) -> Result<(), MemoryError> {
+        if address >= MEMORY_SIZE {
+            return Err(MemoryError::OutOfBounds);
+        }
+
+        if address + size > MEMORY_SIZE {
+            return Err(MemoryError::OutOfBounds);
+        }
+
+        for (i, &value) in values.iter().enumerate() {
+            if i >= size {
+                break; // Prevent out of bounds write
+            }
+
+            self.memory[address + i] = value;
+        }
+
+        Ok(())
     }
 
     pub fn set(&mut self, address: usize, value: MemoryType) -> Result<(), MemoryError> {
