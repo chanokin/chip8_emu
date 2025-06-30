@@ -22,6 +22,7 @@ pub enum DisplayError {
     FlipPixelError(usize, usize),
     MemoryNotInitialized,
     ClearFailed,
+    MemoryError(MemoryError),
 }
 
 impl Display for DisplayError {
@@ -34,6 +35,7 @@ impl Display for DisplayError {
             DisplayError::SetPixelError(x, y) => write!(f, "Failed to set pixel at ({}, {})", x, y),
             DisplayError::GetPixelError(x, y) => write!(f, "Failed to get pixel at ({}, {})", x, y),
             DisplayError::FlipPixelError(x, y) => write!(f, "Failed to flip pixel at ({}, {})", x, y),
+            DisplayError::MemoryError(e) => write!(f, "Memory error: {:?}", e),
         }
     }
 }

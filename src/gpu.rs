@@ -106,18 +106,19 @@ impl Gpu {
         Ok(!current_value)
     }
 
-    pub fn draw_sprite_at(&mut self, x: usize, y: usize, sprite: &[u8], ram: &mut Ram) -> Result<bool, DisplayError> {
+    pub fn draw_sprite_at(&mut self, x: usize, y: usize, sprite_address: usize, sprite_height: u8, ram: &mut Ram) -> Result<bool, DisplayError> {
         // the bool in the return type indicates that we need to set VF as 1 because
         // a screen pixel was on and the sprite pixel was also on
-
-        if sprite.is_empty() {
-            // return Ok(false); // No sprite to draw
-            return Err(DisplayError::MemoryNotInitialized);
-        }
 
         if x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT {
             return Err(DisplayError::CoordinateError(x, y));
         }
+
+        let sprite: Vec<u8> = match ram.get_range(sprite_address, sprite_height as usize) {
+            Ok(data) => data,
+            Err(e) => return Err(DisplayError::MemoryError(e)), // Handle memory error
+        };
+
         let mut set_vf_to_true = false;
         for (row_index, &byte) in sprite.iter().enumerate() {
             for bit_index in 0..8 {

@@ -244,12 +244,9 @@ impl Cpu {
         // Draw a sprite at the specified coordinates (x, y) with height n
         // This would typically involve accessing the display memory and drawing the sprite
         let sprite_address = self.index_register as usize;
-        let sprite: Vec<u8> = match ram.get_range(sprite_address, sprite_height as usize) {
-            Ok(data) => data,
-            Err(e) => return Err(CpuError::MemoryError(e)), // Handle memory error
-        };
 
-        let set_vf_true = match gpu.draw_sprite_at(x as usize, y as usize, &sprite, ram) {
+
+        let set_vf_true = match gpu.draw_sprite_at(x as usize, y as usize, sprite_address, sprite_height, ram) {
             Ok(val) => val,
             Err(e) => return Err(CpuError::DisplayError(e)), // Handle display error
         };
