@@ -49,6 +49,7 @@ pub enum CpuError {
     GetRegisterError(usize),
     SetRegisterError(usize),
     InvalidJump(u16),
+    IndexRegister(u16),
     StackPushError(StackError),
     StackPopError(StackError),
     StackNotInitialized,
@@ -70,6 +71,9 @@ impl Display for CpuError {
             CpuError::StackNotInitialized => write!(f, "Stack is not initialized"),
             CpuError::DisplayError(error) => write!(f, "Display error: {}", error),
             CpuError::MemoryError(error) => write!(f, "Memory error: {:?}", error),
+            CpuError::IndexRegister(address) => {
+                write!(f, "Index register error with address: {:#04x}", address)
+            }
 
         }
     }

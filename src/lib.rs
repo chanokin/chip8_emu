@@ -1,12 +1,12 @@
 pub mod constants;
 pub mod font;
 pub mod errors;
-mod ram;
-mod stack;
-mod registers;
-mod machine;
-mod gpu;
-mod cpu;
+pub mod ram;
+pub mod stack;
+pub mod registers;
+pub mod machine;
+pub mod gpu;
+pub mod cpu;
 
 pub use ram::Ram;
 pub use registers::Registers;

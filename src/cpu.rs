@@ -9,8 +9,6 @@ use crate::constants::{
 };
 use crate::errors::{
     CpuError,
-    DisplayError,
-    MemoryError,
 };
 use crate::registers::Registers;
 use crate::gpu::Gpu;
@@ -90,9 +88,35 @@ impl Cpu {
         }
     }
 
+    pub fn get_program_counter(&self) -> ProgramCounterType {
+        self.program_counter
+    }
+
+    pub fn get_register(&self, index: usize) -> Result<u8, CpuError> {
+        match self.registers.get(index) {
+            Ok(value) => Ok(value),
+            Err(_) => Err(CpuError::GetRegisterError(index)), // Handle out of bounds error
+        }
+    }
+
+    pub fn get_index_register(&self) -> IndexRegisterType {
+        self.index_register
+    }
+
+    pub fn get_stack(&self) -> &Stack {
+        &self.stack
+    }
+
+    pub fn stack_is_empty(&self) -> bool {
+        self.stack.is_empty()
+    }
+
     pub fn reset(&mut self) {
         // Reset CPU state
         self.program_counter = PROGRAM_COUNTER_START; // Reset program counter to start
+        self.index_register = 0; // Reset index register to 0
+        self.stack.reset(); // Clear the stack
+        self.registers.reset(); // Reset all registers to 0
     }
 
     pub fn decode(&self, instruction: u16) -> (u8, u16) {
@@ -232,7 +256,7 @@ impl Cpu {
     fn set_index_register(&mut self, address: u16) -> Result<(), CpuError> {
         // Set the index register to the specified address
         if  address >= DISPLAY_START_ADDRESS as u16 {
-            return Err(CpuError::InvalidJump(address)); // Invalid address for index register
+            return Err(CpuError::IndexRegister(address)); // Invalid address for index register
         }
 
         self.index_register = (address & 0x0FFF) as IndexRegisterType; // Ensure it's a 12-bit address
