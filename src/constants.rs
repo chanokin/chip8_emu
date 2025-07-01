@@ -36,6 +36,8 @@ pub static LOWER_NIBBLE_MASK: u8 = 0x0F; // Mask for the lower nibble
 
 pub static OPCODE_MASK: u16 = 0xF000; // Mask for the opcode (upper 4 bits)
 
+
+
 // the opcode requires a single 12-bit number from the instruction
 pub enum CodeCategories {
     NNN, // 12-bit number
@@ -74,4 +76,7 @@ pub struct FunctionCodes(pub u16);
 impl FunctionCodes {
     pub const ClearDisplay:FunctionCodes = FunctionCodes(0x00E0);
     pub const ReturnFromSubroutine:FunctionCodes = FunctionCodes(0x00EE);
+    /* DEBUGGING OPTION, IF MACHINE/CPU LOOPS REACH THIS WE BREAK */
 }
+
+pub static MAX_LOOP_COUNT: i64 = 1000000; // Maximum loop count to prevent infinite loops

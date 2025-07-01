@@ -1,20 +1,15 @@
 use crate::ram::Ram;
 use crate::cpu::Cpu;
 use crate::gpu::Gpu;
-use crate::constants::{
-    DelayTimerType,
-    SoundTimerType,
-
-};
 use crate::stack::Stack;
+use crate::constants::MAX_LOOP_COUNT;
 
 pub struct Machine {
     pub ram: Ram,
     pub stack: Stack,
     pub gpu: Gpu,
     pub cpu: Cpu,
-    pub delay_timer: DelayTimerType,
-    pub sound_timer: SoundTimerType,
+    pub kill_switch: bool,
 }
 
 impl Machine {
@@ -28,32 +23,55 @@ impl Machine {
             stack,
             gpu,
             cpu,
-            delay_timer: 0,
-            sound_timer: 0,
+            kill_switch: false,
         };
 
-        machine.load_font();
         machine.reset();
+        machine.load_font();
 
         machine
     }
 
     pub fn reset(&mut self) {
         self.ram.reset();
-        self.delay_timer = 0;
-        self.sound_timer = 0;
         self.stack.reset();
+        let _ = self.gpu.reset(&mut self.ram);
+        self.cpu.reset();
+        self.kill_switch = false;
     }
 
     pub fn load_font(&mut self) {
         // self.ram.load_font();
     }
 
-    pub fn link_ram_to_cpu(&mut self) {
-        // self.cpu.ram = &mut self.ram;
+    pub fn load_program(&mut self, program: &[u8]) -> Result<(), String> {
+        Ok(())
     }
 
-    pub fn link_ram_to_display(&mut self) {
-        // self.display.ram = &mut self.ram;
+    pub fn run(&mut self) -> Result<(), String> {
+        let mut count: i64 = 0;
+
+
+        loop {
+            match self.cpu.update(&mut self.gpu, &mut self.ram) {
+                Ok(_) => {
+                    // Continue running the CPU
+                }
+                Err(e) => {
+                    eprintln!("Error: {:?}", e);
+                    self.kill_switch = true;
+                }
+            };
+            if self.kill_switch {
+                break;
+            }
+            count += 1;
+            if count == MAX_LOOP_COUNT {
+                eprintln!("Maximum loop count reached, stopping execution to prevent infinite loop.");
+                self.kill_switch = true;
+            }
+        }
+        Ok(())
     }
+
 }

@@ -121,12 +121,16 @@ impl Gpu {
 
         let mut set_vf_to_true = false;
         for (row_index, &byte) in sprite.iter().enumerate() {
+            if row_index + y >= DISPLAY_HEIGHT {
+                break; // stop if we are out of bounds vertically
+            }
+
             for bit_index in 0..8 {
                 let sprite_pixel_value = (byte >> (7 - bit_index)) & 1;
                 let pixel_x = x + bit_index;
                 let pixel_y = y + row_index;
 
-                if pixel_x >= DISPLAY_WIDTH || pixel_y >= DISPLAY_HEIGHT {
+                if pixel_x >= DISPLAY_WIDTH {
                     continue; // Skip out-of-bounds pixels
                 }
 
@@ -134,7 +138,8 @@ impl Gpu {
 
                 if current_pixel_value > 0 && sprite_pixel_value == 1{
                     // If the pixel is already set and we are trying to set it again, we will flip it
-                    self.flip_pixel(pixel_x, pixel_y, ram)?;
+                    self.set_pixel(pixel_x, pixel_y, 0, ram)?;
+                    // self.flip_pixel(pixel_x, pixel_y, ram)?;
                     set_vf_to_true = true; // Set VF to 1 because we flipped a pixel that was already on
                 } else {
                     // Otherwise, we just set the pixel

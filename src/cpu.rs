@@ -4,6 +4,8 @@ use crate::constants::{
     CodeCategories,
     OpCodes,
     FunctionCodes,
+    DelayTimerType,
+    SoundTimerType,
     PROGRAM_COUNTER_START,
     DISPLAY_START_ADDRESS,
 };
@@ -71,25 +73,123 @@ impl Decoder {
 
 pub struct Cpu {
     decoder: Decoder,
-    program_counter: ProgramCounterType,
     registers: Registers,
-    index_register: IndexRegisterType,
     stack: Stack,
+    program_counter: ProgramCounterType,
+    index_register: IndexRegisterType,
+    delay_timer: DelayTimerType,
+    sound_timer: SoundTimerType,
+
 }
 
 impl Cpu {
     pub fn new() -> Self {
-        Cpu {
+        let mut cpu = Cpu {
             decoder: Decoder::new(),
-            program_counter: PROGRAM_COUNTER_START, // CHIP-8 programs typically start at 0x200
             registers: Registers::new(),
-            index_register: 0, // Initialize index register to 0
             stack: Stack::new(), // Stack can be set later
+            program_counter: PROGRAM_COUNTER_START, // CHIP-8 programs typically start at 0x200
+            index_register: 0, // Initialize index register to 0
+            delay_timer: 0, // Initialize delay timer to 0
+            sound_timer: 0, // Initialize sound timer to 0
+        };
+
+        cpu.reset(); // Reset CPU state to ensure everything is initialized correctly
+
+        cpu
+    }
+
+    pub fn fetch(&mut self, ram: &Ram) -> Result<u16, CpuError> {
+        // Fetch the next instruction from memory
+        let instruction_msb = match ram.get(self.program_counter as usize) {
+            Ok(value) => value,
+            Err(e) => return Err(CpuError::MemoryError(e)), // Handle memory error
+        };
+
+        let instruction_lsb = match ram.get((self.program_counter + 1) as usize) {
+            Ok(value) => value,
+            Err(e) => return Err(CpuError::MemoryError(e)), // Handle memory error
+        };
+
+        let instruction = ((instruction_msb as u16) << 8) | (instruction_lsb as u16);
+
+        self.increment_program_counter()?;
+
+        Ok(instruction)
+    }
+
+    pub fn update(&mut self, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
+        // Fetch the next instruction from memory
+        let instruction = self.fetch(ram)?;
+
+        // Decode the instruction
+        let (opcode, args) = self.decode(instruction);
+
+        // Execute the instruction
+        self.execute(opcode, args, gpu, ram)?;
+
+        // Increment the program counter
+
+        Ok(())
+    }
+
+    pub fn set_program_counter(&mut self, value: ProgramCounterType) -> Result<(), CpuError> {
+        // Set the program counter to a specific value
+        if value < PROGRAM_COUNTER_START || value >= DISPLAY_START_ADDRESS as u16 {
+            return Err(CpuError::InvalidProgramCounter(value)); // Handle invalid program counter value
         }
+
+        self.program_counter = value;
+        Ok(())
+    }
+
+    pub fn increment_program_counter(&mut self) -> Result<(), CpuError> {
+        // Increment the program counter by 2 (as CHIP-8 instructions are 2 bytes long)
+        if self.program_counter + 2 >= DISPLAY_START_ADDRESS as u16 {
+            return Err(CpuError::ProgramCounterOverflow); // Handle program counter overflow
+        }
+
+        self.program_counter += 2;
+
+        Ok(())
     }
 
     pub fn get_program_counter(&self) -> ProgramCounterType {
         self.program_counter
+    }
+
+    pub fn set_delay_timer(&mut self, value: DelayTimerType) {
+        // Set the delay timer to a specific value
+        self.delay_timer = value;
+    }
+
+    pub fn decrease_delay_timer(&mut self) -> Result<(), CpuError> {
+        // Decrease the delay timer by 1
+        if self.delay_timer > 0 {
+            self.delay_timer -= 1;
+            Ok(())
+        } else {
+            Err(CpuError::DelayTimerUnderflow) // Handle underflow error
+        }
+    }
+
+    pub fn get_delay_timer(&self) -> DelayTimerType {
+        self.delay_timer
+    }
+
+    pub fn set_sound_timer(&mut self, value: SoundTimerType) {
+        // Set the sound timer to a specific value
+        self.sound_timer = value;
+    }
+
+    pub fn decrease_sound_timer(&mut self) -> Result<(), CpuError> {
+        // Decrease the sound timer by 1
+        if self.sound_timer > 0 {
+            self.sound_timer -= 1;
+            Ok(())
+        } else {
+            Err(CpuError::SoundTimerUnderflow) // Handle underflow error
+        }
     }
 
     pub fn get_register(&self, index: usize) -> Result<u8, CpuError> {
@@ -111,12 +211,23 @@ impl Cpu {
         self.stack.is_empty()
     }
 
+    pub fn push_to_stack(&mut self, value: ProgramCounterType) -> Result<(), CpuError> {
+        // Push the current program counter onto the stack
+        if let Err(e) = self.stack.push(value) {
+            return Err(CpuError::StackPushError(e)); // Handle stack push error
+        }
+
+        Ok(())
+    }
+
     pub fn reset(&mut self) {
         // Reset CPU state
         self.program_counter = PROGRAM_COUNTER_START; // Reset program counter to start
-        self.index_register = 0; // Reset index register to 0
         self.stack.reset(); // Clear the stack
         self.registers.reset(); // Reset all registers to 0
+        self.index_register = 0; // Reset index register to 0
+        self.delay_timer = 0; // Reset delay timer to 0
+        self.sound_timer = 0; // Reset sound timer to 0
     }
 
     pub fn decode(&self, instruction: u16) -> (u8, u16) {
@@ -140,7 +251,6 @@ impl Cpu {
     }
 
 
-
     pub fn nnn(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         match OpCodes(opcode)  {
             OpCodes::Zero => self.zero(args, gpu, ram),
@@ -151,7 +261,7 @@ impl Cpu {
 
     }
 
-    pub fn xnn(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
+    pub fn xnn(&mut self, opcode: u8, args: u16, _gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         // Extract the register and number from the arguments
         let (register, number) = self.decoder.xnn(args);
 
@@ -174,7 +284,7 @@ impl Cpu {
         }
     }
 
-    fn zero(&mut self, args: u16, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
+    pub fn zero(&mut self, args: u16, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         match FunctionCodes(args) {
             FunctionCodes::ClearDisplay => self.clear_display(gpu, ram), // Clear the display
             FunctionCodes::ReturnFromSubroutine => self.return_from_subroutine(), // Return from subroutine (pop from stack)
@@ -182,7 +292,7 @@ impl Cpu {
         }
     }
 
-    fn jump_to(&mut self, address: u16) -> Result<(), CpuError> {
+    pub fn jump_to(&mut self, address: u16) -> Result<(), CpuError> {
         // Jump to the specified address
         // This would typically set the program counter to the address
         if address < PROGRAM_COUNTER_START || address >= DISPLAY_START_ADDRESS as u16 {
@@ -195,7 +305,7 @@ impl Cpu {
         Ok(())
     }
 
-    fn return_from_subroutine(&mut self) -> Result<(), CpuError> {
+    pub fn return_from_subroutine(&mut self) -> Result<(), CpuError> {
         // Return from a subroutine by popping the address from the stack
         if self.stack.is_empty() {
             return Err(CpuError::StackNotInitialized); // Handle empty stack error
@@ -207,7 +317,7 @@ impl Cpu {
         }
     }
 
-    fn call_routine_at(&mut self, address: u16) -> Result<(), CpuError> {
+    pub fn call_routine_at(&mut self, address: u16) -> Result<(), CpuError> {
         // Set the program counter to the address
         if address < PROGRAM_COUNTER_START || address >= DISPLAY_START_ADDRESS as u16 {
             return Err(CpuError::InvalidJump(address)); // Invalid address for program counter
@@ -222,21 +332,21 @@ impl Cpu {
         Ok(())
     }
 
-    fn clear_display(&mut self, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
+    pub fn clear_display(&mut self, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         match gpu.clear(ram) {
             Ok(_) => Ok(()),
-            Err(e) => Err(CpuError::ClearDisplay), // translate error to CpuError
+            Err(_) => Err(CpuError::ClearDisplay), // translate error to CpuError
         }
     }
 
-    fn set_register(&mut self, index: usize, value: u8) -> Result<(), CpuError> {
+    pub fn set_register(&mut self, index: usize, value: u8) -> Result<(), CpuError> {
         match self.registers.set(index, value) {
             Ok(_) => Ok(()),
             Err(_) => Err(CpuError::SetRegisterError(index)), // translate error to CpuError
         }
     }
 
-    fn add_to_register(&mut self, index: usize, value: u8) -> Result<(), CpuError> {
+    pub fn add_to_register(&mut self, index: usize, value: u8) -> Result<(), CpuError> {
         let register_value = match self.registers.get(index) {
             Ok(val) => val,
             Err(_) => return Err(CpuError::GetRegisterError(index)),
@@ -253,7 +363,7 @@ impl Cpu {
         }
     }
 
-    fn set_index_register(&mut self, address: u16) -> Result<(), CpuError> {
+    pub fn set_index_register(&mut self, address: u16) -> Result<(), CpuError> {
         // Set the index register to the specified address
         if  address >= DISPLAY_START_ADDRESS as u16 {
             return Err(CpuError::IndexRegister(address)); // Invalid address for index register
@@ -264,7 +374,7 @@ impl Cpu {
         Ok(())
     }
 
-    fn draw_sprite_at(&mut self, x: u8, y: u8, sprite_height: u8, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
+    pub fn draw_sprite_at(&mut self, x: u8, y: u8, sprite_height: u8, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         // Draw a sprite at the specified coordinates (x, y) with height n
         // This would typically involve accessing the display memory and drawing the sprite
         let sprite_address = self.index_register as usize;

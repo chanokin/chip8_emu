@@ -55,6 +55,10 @@ pub enum CpuError {
     StackNotInitialized,
     DisplayError(DisplayError),
     MemoryError(MemoryError),
+    DelayTimerUnderflow,
+    SoundTimerUnderflow,
+    ProgramCounterOverflow,
+    InvalidProgramCounter(u16),
 }
 
 impl Display for CpuError {
@@ -73,8 +77,33 @@ impl Display for CpuError {
             CpuError::MemoryError(error) => write!(f, "Memory error: {:?}", error),
             CpuError::IndexRegister(address) => {
                 write!(f, "Index register error with address: {:#04x}", address)
-            }
+            },
+            CpuError::DelayTimerUnderflow => write!(f, "Delay timer underflow"),
+            CpuError::SoundTimerUnderflow => write!(f, "Sound timer underflow"),
+            CpuError::ProgramCounterOverflow => write!(f, "Program counter overflow"),
+            CpuError::InvalidProgramCounter(address) => {
+                write!(f, "Invalid program counter value: {:#04x}", address)
+            },
 
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum MachineError {
+    CpuError(CpuError),
+    MemoryError(MemoryError),
+    StackError(StackError),
+    DisplayError(DisplayError),
+}
+
+impl Display for MachineError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MachineError::CpuError(e) => write!(f, "CPU error: {}", e),
+            MachineError::MemoryError(e) => write!(f, "Memory error: {:?}", e),
+            MachineError::StackError(e) => write!(f, "Stack error: {:?}", e),
+            MachineError::DisplayError(e) => write!(f, "Display error: {}", e),
         }
     }
 }
