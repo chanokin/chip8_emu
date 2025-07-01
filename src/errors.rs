@@ -95,6 +95,7 @@ pub enum MachineError {
     MemoryError(MemoryError),
     StackError(StackError),
     DisplayError(DisplayError),
+    ProgramTooLarge(usize, usize), // (actual size, max size)
 }
 
 impl Display for MachineError {
@@ -104,6 +105,9 @@ impl Display for MachineError {
             MachineError::MemoryError(e) => write!(f, "Memory error: {:?}", e),
             MachineError::StackError(e) => write!(f, "Stack error: {:?}", e),
             MachineError::DisplayError(e) => write!(f, "Display error: {}", e),
+            MachineError::ProgramTooLarge(actual, max) => {
+                write!(f, "Program size {} exceeds maximum allowed size {}", actual, max)
+            },
         }
     }
 }

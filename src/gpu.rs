@@ -106,7 +106,7 @@ impl Gpu {
         Ok(!current_value)
     }
 
-    pub fn draw_sprite_at(&mut self, x: usize, y: usize, sprite_address: usize, sprite_height: u8, ram: &mut Ram) -> Result<bool, DisplayError> {
+    pub fn draw_sprite_at(&mut self, x: usize, y: usize, sprite_address: u16, sprite_height: u8, ram: &mut Ram) -> Result<bool, DisplayError> {
         // the bool in the return type indicates that we need to set VF as 1 because
         // a screen pixel was on and the sprite pixel was also on
 

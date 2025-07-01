@@ -377,8 +377,7 @@ impl Cpu {
     pub fn draw_sprite_at(&mut self, x: u8, y: u8, sprite_height: u8, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         // Draw a sprite at the specified coordinates (x, y) with height n
         // This would typically involve accessing the display memory and drawing the sprite
-        let sprite_address = self.index_register as usize;
-
+        let sprite_address = self.index_register;
 
         let set_vf_true = match gpu.draw_sprite_at(x as usize, y as usize, sprite_address, sprite_height, ram) {
             Ok(val) => val,

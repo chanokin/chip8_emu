@@ -31,6 +31,8 @@ pub static FONT_END_ADDRESS: usize = 0x0A0; // 160 in decimal
 
 pub static PROGRAM_COUNTER_START: ProgramCounterType = 0x200; // CHIP-8 programs typically start at 0x200
 
+pub static MAX_PROGRAM_SIZE: usize = MEMORY_SIZE - PROGRAM_COUNTER_START as usize; // Maximum program size is the remaining memory after the start address
+
 pub static UPPER_NIBBLE_MASK: u8 = 0xF0; // Mask for the upper nibble
 pub static LOWER_NIBBLE_MASK: u8 = 0x0F; // Mask for the lower nibble
 

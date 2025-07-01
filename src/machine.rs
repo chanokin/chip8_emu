@@ -2,7 +2,8 @@ use crate::ram::Ram;
 use crate::cpu::Cpu;
 use crate::gpu::Gpu;
 use crate::stack::Stack;
-use crate::constants::MAX_LOOP_COUNT;
+use crate::constants::{MAX_LOOP_COUNT, MAX_PROGRAM_SIZE, PROGRAM_COUNTER_START};
+use crate::errors::MachineError;
 
 pub struct Machine {
     pub ram: Ram,
@@ -44,13 +45,26 @@ impl Machine {
         // self.ram.load_font();
     }
 
-    pub fn load_program(&mut self, program: &[u8]) -> Result<(), String> {
+    pub fn load_program(&mut self, program: &[u8]) -> Result<(), MachineError> {
+
+        if program.len() > MAX_PROGRAM_SIZE {
+            return Err(MachineError::ProgramTooLarge(program.len(), MAX_PROGRAM_SIZE));
+        }
+
+        match self.ram.set_range(PROGRAM_COUNTER_START, program.len(), program) {
+            Ok(_) => {},
+            Err(e) => {
+                return Err(MachineError::MemoryError(e));
+            }
+        };
+
+        self.reset();
+
         Ok(())
     }
 
     pub fn run(&mut self) -> Result<(), String> {
         let mut count: i64 = 0;
-
 
         loop {
             match self.cpu.update(&mut self.gpu, &mut self.ram) {
@@ -65,6 +79,7 @@ impl Machine {
             if self.kill_switch {
                 break;
             }
+
             count += 1;
             if count == MAX_LOOP_COUNT {
                 eprintln!("Maximum loop count reached, stopping execution to prevent infinite loop.");

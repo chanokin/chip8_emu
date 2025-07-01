@@ -1,6 +1,5 @@
 use crate::constants::{
-    MEMORY_SIZE,
-    MemoryType
+    MemoryType, MEMORY_SIZE, PROGRAM_COUNTER_START
 };
 
 use crate::errors::MemoryError;
@@ -29,7 +28,8 @@ impl Ram {
         Ok(self.memory[address])
     }
 
-    pub fn get_range(&self, address: usize, size: usize) -> Result<Vec<MemoryType>, MemoryError> {
+    pub fn get_range(&self, address: u16, size: usize) -> Result<Vec<MemoryType>, MemoryError> {
+        let address = address as usize;
         if address >= MEMORY_SIZE {
             return Err(MemoryError::OutOfBounds);
         }
@@ -41,7 +41,11 @@ impl Ram {
         Ok(self.memory[address..address + size].to_vec())
     }
 
-    pub fn set_range(&mut self, address: usize, size: usize, values: &[u8]) -> Result<(), MemoryError> {
+    pub fn set_range(&mut self, address: u16, size: usize, values: &[u8]) -> Result<(), MemoryError> {
+        if address < PROGRAM_COUNTER_START {
+            return Err(MemoryError::OutOfBounds);
+        }
+        let address = address as usize;
         if address >= MEMORY_SIZE {
             return Err(MemoryError::OutOfBounds);
         }
@@ -51,7 +55,9 @@ impl Ram {
         }
 
         for (i, &value) in values.iter().enumerate() {
+
             if i >= size {
+                println!("Warning: Attempting to write beyond the specified size. Stopping write operation.");
                 break; // Prevent out of bounds write
             }
 
