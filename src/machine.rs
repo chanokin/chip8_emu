@@ -63,8 +63,12 @@ impl Machine {
         Ok(())
     }
 
-    pub fn run(&mut self) -> Result<(), String> {
-        let mut count: i64 = 0;
+    pub fn run(&mut self, max_loops:Option<i64>) -> Result<(), String> {
+        let max_loops = match max_loops {
+            Some(value) if value > 0 => value,
+            _ => MAX_LOOP_COUNT, // Default to MAX_LOOP_COUNT if no valid max_loops is provided
+        };
+        let mut loop_count: i64 = 0;
 
         loop {
             match self.cpu.update(&mut self.gpu, &mut self.ram) {
@@ -80,8 +84,8 @@ impl Machine {
                 break;
             }
 
-            count += 1;
-            if count == MAX_LOOP_COUNT {
+            loop_count += 1;
+            if loop_count == max_loops {
                 eprintln!("Maximum loop count reached, stopping execution to prevent infinite loop.");
                 self.kill_switch = true;
             }
