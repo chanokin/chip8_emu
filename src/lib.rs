@@ -8,7 +8,7 @@ pub mod machine;
 pub mod gpu;
 pub mod cpu;
 pub mod rom_reader;
-
+pub mod renderer;
 
 pub use ram::Ram;
 pub use registers::Registers;
@@ -17,4 +17,6 @@ pub use gpu::Gpu;
 pub use machine::Machine;
 pub use cpu::Cpu;
 pub use rom_reader::Reader;
+pub use renderer::TextRenderer;
+
 

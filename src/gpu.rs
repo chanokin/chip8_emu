@@ -151,4 +151,40 @@ impl Gpu {
         Ok(set_vf_to_true)
     }
 
+    pub fn buffer_as_u8(&self, ram: &Ram) -> Result<Vec<Vec<u8>>, DisplayError> {
+        let mut buffer = Vec::with_capacity(DISPLAY_HEIGHT);
+
+        let mut row_idx = 0;
+        let mut col_idx = 0;
+        for index in DISPLAY_START_ADDRESS..DISPLAY_END_ADDRESS {
+
+            if row_idx >= DISPLAY_HEIGHT {
+                break; // Prevent out-of-bounds access
+            }
+
+            match ram.get(index) {
+                Ok(value) => {
+                    for bit in (0..8).rev() {
+                        if buffer.len() <= row_idx {
+                            buffer.push(vec![0; DISPLAY_CELLS_PER_ROW]);
+                        }
+
+                        let pixel_value = (value >> bit) & 1;
+                        buffer[row_idx][col_idx] = pixel_value;
+
+                        col_idx += 1;
+                    }
+                },
+                Err(e) => return Err(DisplayError::MemoryError(e)),
+            }
+
+            if col_idx >= DISPLAY_WIDTH {
+                col_idx = 0; // Reset column index for the next row
+                row_idx += 1; // Move to the next row
+            }
+        }
+
+        Ok(buffer)
+    }
+
 }
