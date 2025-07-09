@@ -78,4 +78,8 @@ impl Ram {
     pub fn len(&self) -> usize {
         MEMORY_SIZE
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.memory.iter().all(|&x| x == 0)
+    }
 }

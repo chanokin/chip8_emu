@@ -2,8 +2,9 @@ use crate::ram::Ram;
 use crate::cpu::Cpu;
 use crate::gpu::Gpu;
 use crate::stack::Stack;
-use crate::constants::{MAX_LOOP_COUNT, MAX_PROGRAM_SIZE, PROGRAM_COUNTER_START};
+use crate::constants::{FONT_START_ADDRESS, MAX_LOOP_COUNT, MAX_PROGRAM_SIZE, PROGRAM_COUNTER_START};
 use crate::errors::MachineError;
+use crate::font::FONT;
 
 pub struct Machine {
     pub ram: Ram,
@@ -42,7 +43,13 @@ impl Machine {
     }
 
     pub fn load_font(&mut self) {
-        // self.ram.load_font();
+        let flat_font = FONT.as_flattened();
+      for (i, &byte) in flat_font.iter().enumerate() {
+            let address = FONT_START_ADDRESS + i;
+            if let Err(e) = self.ram.set(address, byte) {
+                eprintln!("Error loading font at address {}: {:?}", address, e);
+            }
+        }
     }
 
     pub fn load_program(&mut self, program: &[u8]) -> Result<(), MachineError> {
@@ -51,6 +58,8 @@ impl Machine {
             return Err(MachineError::ProgramTooLarge(program.len(), MAX_PROGRAM_SIZE));
         }
 
+        self.reset();
+
         match self.ram.set_range(PROGRAM_COUNTER_START, program.len(), program) {
             Ok(_) => {},
             Err(e) => {
@@ -58,7 +67,6 @@ impl Machine {
             }
         };
 
-        self.reset();
 
         Ok(())
     }

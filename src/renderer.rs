@@ -6,6 +6,7 @@ pub trait Show {
     fn show(&self, gpu: &Gpu, ram: &Ram) -> Result<(), String>;
 }
 
+#[derive(Debug, Default)]
 pub struct TextRenderer;
 
 impl Show for TextRenderer {
@@ -22,7 +23,7 @@ impl Show for TextRenderer {
         }
 
         for row in output_buffer {
-            let line: String = row.iter().map(|&b| if b > 0 { '#' } else { '.' }).collect();
+            let line: String = row.iter().map(|&b| if b > 0 { '█' } else { ' ' }).collect();
             println!("{}", line);
         }
         Ok(())

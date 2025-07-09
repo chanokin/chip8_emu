@@ -17,7 +17,7 @@ use crate::gpu::Gpu;
 use crate::ram::Ram;
 use crate::stack::Stack;
 pub struct Decoder;
-
+use log::{debug, };
 
 impl Decoder {
     pub fn new() -> Self {
@@ -220,6 +220,14 @@ impl Cpu {
         Ok(())
     }
 
+    pub fn pop_from_stack(&mut self) -> Result<ProgramCounterType, CpuError> {
+        // Pop the top value from the stack
+        match self.stack.pop() {
+            Ok(value) => Ok(value),
+            Err(e) => Err(CpuError::StackPopError(e)), // Handle stack pop error
+        }
+    }
+
     pub fn reset(&mut self) {
         // Reset CPU state
         self.program_counter = PROGRAM_COUNTER_START; // Reset program counter to start
@@ -233,7 +241,7 @@ impl Cpu {
     pub fn decode(&self, instruction: u16) -> (u8, u16) {
         let opcode = self.decoder.opcode(instruction);
         let args = self.decoder.args(instruction);
-
+        debug!("\nDecoded instruction: 0x{:04X} -> Opcode: 0x{:02X}, Args: 0x{:04X}", instruction, opcode, args);
         (opcode, args)
     }
 
@@ -261,7 +269,7 @@ impl Cpu {
 
     }
 
-    pub fn xnn(&mut self, opcode: u8, args: u16, _gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
+    pub fn xnn(&mut self, opcode: u8, args: u16, _gpu: &mut Gpu, _ram: &mut Ram) -> Result<(), CpuError> {
         // Extract the register and number from the arguments
         let (register, number) = self.decoder.xnn(args);
 
@@ -293,6 +301,7 @@ impl Cpu {
     }
 
     pub fn jump_to(&mut self, address: u16) -> Result<(), CpuError> {
+        debug!("Jumping to address: 0x{:04X}", address);
         // Jump to the specified address
         // This would typically set the program counter to the address
         if address < PROGRAM_COUNTER_START || address >= DISPLAY_START_ADDRESS as u16 {
@@ -306,18 +315,28 @@ impl Cpu {
     }
 
     pub fn return_from_subroutine(&mut self) -> Result<(), CpuError> {
+        debug!("Returning from subroutine");
         // Return from a subroutine by popping the address from the stack
         if self.stack.is_empty() {
             return Err(CpuError::StackNotInitialized); // Handle empty stack error
         }
 
-        match self.stack.pop() {
-            Ok(_) => Ok(()),
-            Err(e) => Err(CpuError::StackPopError(e)), // Handle stack pop error
+        match self.pop_from_stack() {
+            // Ok(address) => {
+            //     // Set the program counter to the popped address
+            //     if address < PROGRAM_COUNTER_START || address >= DISPLAY_START_ADDRESS as u16 {
+            //         return Err(CpuError::InvalidJump(address)); // Invalid address for program counter
+            //     }
+            //     self.program_counter = address;
+            //     Ok(())
+            // },
+            Ok(_) => Ok(()), // Pop the address from the stack, no need to set program counter here
+            Err(e) => Err(e), // Handle stack pop error
         }
     }
 
     pub fn call_routine_at(&mut self, address: u16) -> Result<(), CpuError> {
+        debug!("Calling subroutine at address: 0x{:04X}", address);
         // Set the program counter to the address
         if address < PROGRAM_COUNTER_START || address >= DISPLAY_START_ADDRESS as u16 {
             return Err(CpuError::InvalidJump(address)); // Invalid address for program counter
@@ -333,6 +352,7 @@ impl Cpu {
     }
 
     pub fn clear_display(&mut self, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
+        debug!("Clearing display");
         match gpu.clear(ram) {
             Ok(_) => Ok(()),
             Err(_) => Err(CpuError::ClearDisplay), // translate error to CpuError
@@ -340,6 +360,7 @@ impl Cpu {
     }
 
     pub fn set_register(&mut self, index: usize, value: u8) -> Result<(), CpuError> {
+        debug!("Setting register {} to value {}", index, value);
         match self.registers.set(index, value) {
             Ok(_) => Ok(()),
             Err(_) => Err(CpuError::SetRegisterError(index)), // translate error to CpuError
@@ -347,6 +368,8 @@ impl Cpu {
     }
 
     pub fn add_to_register(&mut self, index: usize, value: u8) -> Result<(), CpuError> {
+        debug!("Adding {} to register {}", value, index);
+
         let register_value = match self.registers.get(index) {
             Ok(val) => val,
             Err(_) => return Err(CpuError::GetRegisterError(index)),
@@ -364,6 +387,7 @@ impl Cpu {
     }
 
     pub fn set_index_register(&mut self, address: u16) -> Result<(), CpuError> {
+        debug!("Setting index register to address: 0x{:04X}", address);
         // Set the index register to the specified address
         if  address >= DISPLAY_START_ADDRESS as u16 {
             return Err(CpuError::IndexRegister(address)); // Invalid address for index register
@@ -378,6 +402,13 @@ impl Cpu {
         // Draw a sprite at the specified coordinates (x, y) with height n
         // This would typically involve accessing the display memory and drawing the sprite
         let sprite_address = self.index_register;
+        let x = self.get_register(x as usize)?;
+        let y = self.get_register(y as usize)?;
+
+        debug!(
+            "Drawing sprite in {:04X} at coordinates ({}, {}) with height {}",
+            sprite_address, x, y, sprite_height
+        );
 
         let set_vf_true = match gpu.draw_sprite_at(x as usize, y as usize, sprite_address, sprite_height, ram) {
             Ok(val) => val,

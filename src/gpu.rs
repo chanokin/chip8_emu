@@ -20,7 +20,7 @@ pub fn coord_to_indices(x: usize, y: usize) -> Result<(usize, usize), DisplayErr
     let cell_for_row = y * DISPLAY_CELLS_PER_ROW;
     let cell_at_row = x / DISPLAY_COLS_PER_CELL;
     let byte_index = DISPLAY_START_ADDRESS + cell_for_row + cell_at_row;
-    let bit_index = x % DISPLAY_COLS_PER_CELL;
+    let bit_index = DISPLAY_COLS_PER_CELL - 1 - x % DISPLAY_COLS_PER_CELL;
 
     if byte_index >= DISPLAY_END_ADDRESS {
         return Err(DisplayError::OutOfBounds);
@@ -120,20 +120,20 @@ impl Gpu {
         };
 
         let mut set_vf_to_true = false;
-        for (row_index, &byte) in sprite.iter().enumerate() {
-            if row_index + y >= DISPLAY_HEIGHT {
+        for (row_index, &sprite_row) in sprite.iter().enumerate() {
+            let pixel_y = y + row_index;
+            if pixel_y >= DISPLAY_HEIGHT {
                 break; // stop if we are out of bounds vertically
             }
 
             for bit_index in 0..8 {
-                let sprite_pixel_value = (byte >> (7 - bit_index)) & 1;
                 let pixel_x = x + bit_index;
-                let pixel_y = y + row_index;
 
                 if pixel_x >= DISPLAY_WIDTH {
                     continue; // Skip out-of-bounds pixels
                 }
 
+                let sprite_pixel_value = (sprite_row >> (7 - bit_index)) & 1;
                 let current_pixel_value = self.get_pixel(pixel_x, pixel_y, ram)?;
 
                 if current_pixel_value > 0 && sprite_pixel_value == 1{
@@ -166,7 +166,7 @@ impl Gpu {
                 Ok(value) => {
                     for bit in (0..8).rev() {
                         if buffer.len() <= row_idx {
-                            buffer.push(vec![0; DISPLAY_CELLS_PER_ROW]);
+                            buffer.push(vec![0; DISPLAY_WIDTH]);
                         }
 
                         let pixel_value = (value >> bit) & 1;
