@@ -81,4 +81,17 @@ impl FunctionCodes {
     /* DEBUGGING OPTION, IF MACHINE/CPU LOOPS REACH THIS WE BREAK */
 }
 
+pub enum RegisterOperations {
+    SetToSecond,
+    OrEqual,
+    AndEqual,
+    XorEqual,
+    AddEqual,
+    SubtractEqual,
+    SetToSecondMinusFirst,
+    ShiftRight,
+    ShiftLeft,
+}
+
+
 pub static MAX_LOOP_COUNT: i64 = 1000000; // Maximum loop count to prevent infinite loops
