@@ -125,6 +125,14 @@ mod tests {
         ];
         let image = machine.gpu.buffer_as_u8(&machine.ram).expect("should be able to get GPU buffer");
 
+        for (row_idx, row) in image.iter().enumerate() {
+            for (col_idx, pixel) in row.iter().enumerate() {
+                let output = if *pixel == 1 { "█" } else { " " };
+                print!("{}", output);
+            }
+            println!();
+        }
+
         let image: Vec<u8> = image.iter().flatten().map(|x| *x).collect();
         assert_eq!(image, logo, "The image should match the expected IBM logo");
     }
