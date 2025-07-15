@@ -464,9 +464,13 @@ impl Cpu {
     pub fn reg_ops(&mut self, register_0: usize, register_1: usize, number: u8, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         debug!("Performing register operation with registers {} and {}, number {}", register_0, register_1, number);
         // Perform operations based on the opcode
-        match OpCodes(number) {
+        let value_0 = self.get_register(register_0)?;
+        let value_1 = self.get_register(register_1)?;
 
-        }
+        // match number {
+        //     RegisterOperations::SetToSecond => {}
+        // }
+        Ok(())
     }
     /* 0x9??? ---------------------------------------------------------------------- */
 
