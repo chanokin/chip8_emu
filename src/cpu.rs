@@ -79,7 +79,6 @@ pub struct Cpu {
     index_register: IndexRegisterType,
     delay_timer: DelayTimerType,
     sound_timer: SoundTimerType,
-
 }
 
 impl Cpu {
@@ -206,7 +205,13 @@ impl Cpu {
     pub fn get_stack(&self) -> &Stack {
         &self.stack
     }
-
+    pub fn peek_stack(&self) -> Result<ProgramCounterType, CpuError> {
+        // Peek at the top value of the stack without popping it
+        match self.stack.peek() {
+            Ok(value) => Ok(value),
+            Err(e) => Err(CpuError::StackError(e)), // Handle stack peek error
+        }
+    }
     pub fn stack_is_empty(&self) -> bool {
         self.stack.is_empty()
     }
@@ -251,6 +256,7 @@ impl Cpu {
             Err(e) => return Err(e),
         };
 
+        // just trying to distribute according to how we split the instructions
         match category {
             CodeCategories::NNN => self.nnn(opcode, args, gpu, ram),
             CodeCategories::XNN => self.xnn(opcode, args, gpu, ram),
@@ -261,9 +267,10 @@ impl Cpu {
 
     pub fn nnn(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         match OpCodes(opcode)  {
-            OpCodes::Zero => self.zero(args, gpu, ram),
-            OpCodes::Jump => self.jump_to(args),
-            OpCodes::SetIndex => self.set_index_register(args),
+            OpCodes::Zero => self.zero(args, gpu, ram), // 0x0NNN
+            OpCodes::Jump => self.jump_to(args), // 0x1NNN
+            OpCodes::CallSubroutine => self.call_routine_at(args), // 0x2NNN
+            OpCodes::SetIndex => self.set_index_register(args), // 0xANNN
             _ => Err(CpuError::InvalidOpcode(opcode)),
         }
 
@@ -275,8 +282,13 @@ impl Cpu {
 
         // execute the instruction based on the opcode
         match OpCodes(opcode) {
-            OpCodes::SetRegister => self.set_register(register as usize, number),
-            OpCodes::AddToRegister => self.add_to_register(register as usize, number),
+            OpCodes::SkipIfEqual => self.skip_if_equal(register as usize, number), // 0x3XNN
+            OpCodes::SkipIfUnequal => self.skip_if_unequal(register as usize, number), // 0x4XNN
+            OpCodes::SetRegister => self.set_register(register as usize, number), // 0x6XNN
+            OpCodes::AddToRegister => self.add_to_register(register as usize, number), // 0x7XNN
+            // 0xCXNN
+            // 0xEXNN
+            // 0xFXNN
             _ => Err(CpuError::InvalidOpcode(opcode)),
         }
     }
@@ -287,18 +299,49 @@ impl Cpu {
 
         // execute the instruction based on the opcode
         match OpCodes(opcode) {
-            OpCodes::Draw => self.draw_sprite_at(register_0, register_1, number, gpu, ram),
+            // 0x5XY0
+            // 0x8XYN
+            // 0x9XY0
+            OpCodes::Draw => self.draw_sprite_at(register_0, register_1, number, gpu, ram), // 0xDXYN
             _ => Err(CpuError::InvalidOpcode(opcode)),
         }
     }
 
     pub fn zero(&mut self, args: u16, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         match FunctionCodes(args) {
-            FunctionCodes::ClearDisplay => self.clear_display(gpu, ram), // Clear the display
-            FunctionCodes::ReturnFromSubroutine => self.return_from_subroutine(), // Return from subroutine (pop from stack)
+            FunctionCodes::ClearDisplay => self.clear_display(gpu, ram), // 0x00E0
+            FunctionCodes::ReturnFromSubroutine => self.return_from_subroutine(), // 0x00EE
             _ => self.call_routine_at(args), // Call a subroutine at the given address
         }
     }
+
+    /* 0x0??? ---------------------------------------------------------------------- */
+
+    // 0x00E0
+    pub fn clear_display(&mut self, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
+        debug!("Clearing display");
+        match gpu.clear(ram) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(CpuError::ClearDisplay), // translate error to CpuError
+        }
+    }
+
+    pub fn return_from_subroutine(&mut self) -> Result<(), CpuError> {
+        debug!("Returning from subroutine");
+        // Return from a subroutine by popping the address from the stack
+        if self.stack.is_empty() {
+            return Err(CpuError::StackNotInitialized); // Handle empty stack error
+        }
+
+        let address = self.pop_from_stack()?;
+
+        self.program_counter = address;
+
+        Ok(())
+    }
+
+
+    /* 0x1??? ---------------------------------------------------------------------- */
 
     pub fn jump_to(&mut self, address: u16) -> Result<(), CpuError> {
         debug!("Jumping to address: 0x{:04X}", address);
@@ -314,26 +357,7 @@ impl Cpu {
         Ok(())
     }
 
-    pub fn return_from_subroutine(&mut self) -> Result<(), CpuError> {
-        debug!("Returning from subroutine");
-        // Return from a subroutine by popping the address from the stack
-        if self.stack.is_empty() {
-            return Err(CpuError::StackNotInitialized); // Handle empty stack error
-        }
-
-        match self.pop_from_stack() {
-            // Ok(address) => {
-            //     // Set the program counter to the popped address
-            //     if address < PROGRAM_COUNTER_START || address >= DISPLAY_START_ADDRESS as u16 {
-            //         return Err(CpuError::InvalidJump(address)); // Invalid address for program counter
-            //     }
-            //     self.program_counter = address;
-            //     Ok(())
-            // },
-            Ok(_) => Ok(()), // Pop the address from the stack, no need to set program counter here
-            Err(e) => Err(e), // Handle stack pop error
-        }
-    }
+    /* 0x2??? ---------------------------------------------------------------------- */
 
     pub fn call_routine_at(&mut self, address: u16) -> Result<(), CpuError> {
         debug!("Calling subroutine at address: 0x{:04X}", address);
@@ -351,14 +375,60 @@ impl Cpu {
         Ok(())
     }
 
-    pub fn clear_display(&mut self, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
-        debug!("Clearing display");
-        match gpu.clear(ram) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(CpuError::ClearDisplay), // translate error to CpuError
+    /* 0x3??? ---------------------------------------------------------------------- */
+    pub fn skip_if_equal(&mut self, register: usize, value: u8) -> Result<(), CpuError> {
+        debug!("Skipping next instruction if register {} equals {}", register, value);
+        // Skip the next instruction if the value in the specified register equals the given value
+        let register_value = match self.registers.get(register) {
+            Ok(val) => val,
+            Err(_) => return Err(CpuError::GetRegisterError(register)),
+        };
+
+        if register_value == value {
+            self.increment_program_counter()?; // Skip next instruction
         }
+
+        Ok(())
     }
 
+    /* 0x4??? ---------------------------------------------------------------------- */
+    pub fn skip_if_unequal(&mut self, register: usize, value: u8) -> Result<(), CpuError> {
+        debug!("Skipping next instruction if register {} does not equal {}", register, value);
+        // Skip the next instruction if the value in the specified register does not equal the given value
+        let register_value = match self.registers.get(register) {
+            Ok(val) => val,
+            Err(_) => return Err(CpuError::GetRegisterError(register)),
+        };
+
+        if register_value != value {
+            self.increment_program_counter()?; // Skip next instruction
+        }
+
+        Ok(())
+    }
+
+    /* 0x5??? ---------------------------------------------------------------------- */
+    pub fn skip_if_equal_registers(&mut self, register_0: usize, register_1: usize) -> Result<(), CpuError> {
+        debug!("Skipping next instruction if register {} equals register {}", register_0, register_1);
+        // Skip the next instruction if the values in the specified registers are equal
+        let value_0 = match self.registers.get(register_0) {
+            Ok(val) => val,
+            Err(_) => return Err(CpuError::GetRegisterError(register_0)),
+        };
+
+        let value_1 = match self.registers.get(register_1) {
+            Ok(val) => val,
+            Err(_) => return Err(CpuError::GetRegisterError(register_1)),
+        };
+
+        if value_0 == value_1 {
+            self.increment_program_counter()?; // Skip next instruction
+        }
+
+        Ok(())
+    }
+
+    /* 0x6??? ---------------------------------------------------------------------- */
     pub fn set_register(&mut self, index: usize, value: u8) -> Result<(), CpuError> {
         debug!("Setting register {} to value {}", index, value);
         match self.registers.set(index, value) {
@@ -367,6 +437,8 @@ impl Cpu {
         }
     }
 
+
+    /* 0x7??? ---------------------------------------------------------------------- */
     pub fn add_to_register(&mut self, index: usize, value: u8) -> Result<(), CpuError> {
         debug!("Adding {} to register {}", value, index);
 
@@ -386,6 +458,32 @@ impl Cpu {
         }
     }
 
+    /* 0x8??? ---------------------------------------------------------------------- */
+    // a lot of operations are needed here
+
+    /* 0x9??? ---------------------------------------------------------------------- */
+
+    pub fn skip_if_unequal_registers(&mut self, register_0: usize, register_1: usize) -> Result<(), CpuError> {
+        debug!("Skipping next instruction if register {} does not equal register {}", register_0, register_1);
+        // Skip the next instruction if the values in the specified registers are not equal
+        let value_0 = match self.registers.get(register_0) {
+            Ok(val) => val,
+            Err(_) => return Err(CpuError::GetRegisterError(register_0)),
+        };
+
+        let value_1 = match self.registers.get(register_1) {
+            Ok(val) => val,
+            Err(_) => return Err(CpuError::GetRegisterError(register_1)),
+        };
+
+        if value_0 != value_1 {
+            self.increment_program_counter()?; // Skip next instruction
+        }
+
+        Ok(())
+    }
+
+    /* 0xA??? ---------------------------------------------------------------------- */
     pub fn set_index_register(&mut self, address: u16) -> Result<(), CpuError> {
         debug!("Setting index register to address: 0x{:04X}", address);
         // Set the index register to the specified address
@@ -398,6 +496,11 @@ impl Cpu {
         Ok(())
     }
 
+    /* 0xB??? ---------------------------------------------------------------------- */
+
+    /* 0xC??? ---------------------------------------------------------------------- */
+
+    /* 0xD??? ---------------------------------------------------------------------- */
     pub fn draw_sprite_at(&mut self, x: u8, y: u8, sprite_height: u8, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         // Draw a sprite at the specified coordinates (x, y) with height n
         // This would typically involve accessing the display memory and drawing the sprite
@@ -421,5 +524,6 @@ impl Cpu {
         Ok(())
     }
 
+    /* 0xF??? ---------------------------------------------------------------------- */
 
 }

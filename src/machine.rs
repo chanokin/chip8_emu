@@ -71,7 +71,17 @@ impl Machine {
         Ok(())
     }
 
-    pub fn run(&mut self, max_loops:Option<i64>) -> Result<(), String> {
+    pub fn step(&mut self) -> Result<(), MachineError> {
+        match self.cpu.update(&mut self.gpu, &mut self.ram) {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                Err(MachineError::CpuError(e))
+            }
+        }
+
+    }
+
+    pub fn run(&mut self, max_loops:Option<i64>) -> Result<(), MachineError> {
         let max_loops = match max_loops {
             Some(value) if value > 0 => value,
             _ => MAX_LOOP_COUNT, // Default to MAX_LOOP_COUNT if no valid max_loops is provided
@@ -79,18 +89,11 @@ impl Machine {
         let mut loop_count: i64 = 0;
 
         loop {
-            match self.cpu.update(&mut self.gpu, &mut self.ram) {
-                Ok(_) => {
-                    // Continue running the CPU
-                }
-                Err(e) => {
-                    eprintln!("Error: {:?}", e);
-                    self.kill_switch = true;
-                }
-            };
             if self.kill_switch {
                 break;
             }
+
+            self.step()?;
 
             loop_count += 1;
             if loop_count == max_loops {
