@@ -60,6 +60,7 @@ pub enum CpuError {
     SoundTimerUnderflow,
     ProgramCounterOverflow,
     InvalidProgramCounter(u16),
+    InvalidRegisterOperation(u8), // New error for invalid register operations
 }
 
 impl Display for CpuError {
@@ -85,6 +86,9 @@ impl Display for CpuError {
             CpuError::ProgramCounterOverflow => write!(f, "Program counter overflow"),
             CpuError::InvalidProgramCounter(address) => {
                 write!(f, "Invalid program counter value: {:#04x}", address)
+            },
+            CpuError::InvalidRegisterOperation(opcode) => {
+                write!(f, "Invalid register operation: {:#04x}", opcode)
             },
 
         }

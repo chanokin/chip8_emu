@@ -5,6 +5,7 @@ pub static MEMORY_SIZE: usize = 4096;
 pub static STACK_SIZE: usize = 16; // not a spec limit
 pub static VARIABLE_REGISTERS_SIZE: usize = 16;
 pub static CARRY_FLAG_ADDRESS: u8 = 15; // i.e. VARIABLE_REGISTERS_SIZE - 1
+pub static NUMBER_OF_KEYS: usize = 16; // 0x0 to 0xF
 
 pub type MemoryType = u8;
 pub type AddressType = u16; // these should be 12-bit addresses
@@ -55,13 +56,13 @@ impl OpCodes {
     pub const Zero:OpCodes = OpCodes(0x0);
     pub const Jump:OpCodes = OpCodes(0x1);
     pub const CallSubroutine:OpCodes = OpCodes(0x2);
-    pub const SkipIfEqual:OpCodes = OpCodes(0x3);
-    pub const SkipIfUnequal:OpCodes = OpCodes(0x4);
-    pub const SkipIfRegEqual:OpCodes = OpCodes(0x5);
+    pub const SkipIfEqualRegVal:OpCodes = OpCodes(0x3);
+    pub const SkipIfUnequalRegVal:OpCodes = OpCodes(0x4);
+    pub const SkipIfEqualRegReg:OpCodes = OpCodes(0x5);
     pub const SetRegister:OpCodes = OpCodes(0x6);
     pub const AddToRegister:OpCodes = OpCodes(0x7);
     pub const RegisterOperations:OpCodes = OpCodes(0x8);
-    pub const SkipIfRegUnequal:OpCodes = OpCodes(0x9);
+    pub const SkipIfUnequalRegReg:OpCodes = OpCodes(0x9);
     pub const SetIndex:OpCodes = OpCodes(0xA);
     pub const JumpWithOffset:OpCodes = OpCodes(0xB);
     pub const Random:OpCodes = OpCodes(0xC);
@@ -72,25 +73,33 @@ impl OpCodes {
 
 
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
-pub struct FunctionCodes(pub u16);
+pub struct FunctionCodes(pub u8);
 
 #[allow(non_upper_case_globals)]
 impl FunctionCodes {
-    pub const ClearDisplay:FunctionCodes = FunctionCodes(0x00E0);
-    pub const ReturnFromSubroutine:FunctionCodes = FunctionCodes(0x00EE);
+    pub const ClearDisplay:FunctionCodes = FunctionCodes(0xE0);
+    pub const ReturnFromSubroutine:FunctionCodes = FunctionCodes(0xEE);
     /* DEBUGGING OPTION, IF MACHINE/CPU LOOPS REACH THIS WE BREAK */
+    pub const GetKey:FunctionCodes = FunctionCodes(0xFB);
+    pub const SkipIfKeyPressed:FunctionCodes = FunctionCodes(0x9E);
+    pub const SkipIfKeyNotPressed:FunctionCodes = FunctionCodes(0xA1);
 }
 
-pub enum RegisterOperations {
-    SetToSecond,
-    OrEqual,
-    AndEqual,
-    XorEqual,
-    AddEqual,
-    SubtractEqual,
-    SetToSecondMinusFirst,
-    ShiftRight,
-    ShiftLeft,
+
+#[derive(Clone,Copy,Debug,PartialEq,Eq)]
+pub struct RegisterOperations(pub u8);
+
+#[allow(non_upper_case_globals)]
+impl RegisterOperations {
+    pub const SetToSecond: RegisterOperations = RegisterOperations(0x0);
+    pub const OrEqual: RegisterOperations = RegisterOperations(0x1);
+    pub const AndEqual: RegisterOperations = RegisterOperations(0x2);
+    pub const XorEqual: RegisterOperations = RegisterOperations(0x3);
+    pub const AddEqual: RegisterOperations = RegisterOperations(0x4);
+    pub const SubtractEqual: RegisterOperations = RegisterOperations(0x5);
+    pub const ShiftRightEqual: RegisterOperations = RegisterOperations(0x6);
+    pub const SetToSecondMinusFirst: RegisterOperations = RegisterOperations(0x7);
+    pub const ShiftLeftEqual: RegisterOperations = RegisterOperations(0xE);
 }
 
 

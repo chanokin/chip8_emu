@@ -1,13 +1,5 @@
 use crate::constants::{
-    ProgramCounterType,
-    IndexRegisterType,
-    CodeCategories,
-    OpCodes,
-    FunctionCodes,
-    DelayTimerType,
-    SoundTimerType,
-    PROGRAM_COUNTER_START,
-    DISPLAY_START_ADDRESS,
+    CodeCategories, DelayTimerType, FunctionCodes, IndexRegisterType, OpCodes, ProgramCounterType, RegisterOperations, SoundTimerType, VariableRegisterType, DISPLAY_START_ADDRESS, NUMBER_OF_KEYS, PROGRAM_COUNTER_START
 };
 use crate::errors::{
     CpuError,
@@ -79,6 +71,7 @@ pub struct Cpu {
     index_register: IndexRegisterType,
     delay_timer: DelayTimerType,
     sound_timer: SoundTimerType,
+    keyboard_buffer: [u8; 16], // Buffer for keyboard input
 }
 
 impl Cpu {
@@ -91,6 +84,7 @@ impl Cpu {
             index_register: 0, // Initialize index register to 0
             delay_timer: 0, // Initialize delay timer to 0
             sound_timer: 0, // Initialize sound timer to 0
+            keyboard_buffer: [0; 16], // Initialize keyboard buffer to 0
         };
 
         cpu.reset(); // Reset CPU state to ensure everything is initialized correctly
@@ -116,6 +110,38 @@ impl Cpu {
 
         Ok(instruction)
     }
+
+    pub fn reset(&mut self) {
+        // Reset CPU state
+        self.program_counter = PROGRAM_COUNTER_START; // Reset program counter to start
+        self.stack.reset(); // Clear the stack
+        self.registers.reset(); // Reset all registers to 0
+        self.index_register = 0; // Reset index register to 0
+        self.delay_timer = 0; // Reset delay timer to 0
+        self.sound_timer = 0; // Reset sound timer to 0
+    }
+
+    pub fn decode(&self, instruction: u16) -> (u8, u16) {
+        let opcode = self.decoder.opcode(instruction);
+        let args = self.decoder.args(instruction);
+        debug!("\nDecoded instruction: 0x{:04X} -> Opcode: 0x{:02X}, Args: 0x{:04X}", instruction, opcode, args);
+        (opcode, args)
+    }
+
+    pub fn execute(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
+        let category = match self.decoder.extraction_category(opcode) {
+            Ok(cat) => cat,
+            Err(e) => return Err(e),
+        };
+
+        // just trying to distribute according to how we split the instructions
+        match category {
+            CodeCategories::NNN => self.nnn(opcode, args, gpu, ram),
+            CodeCategories::XNN => self.xnn(opcode, args, gpu, ram),
+            _ => self.xyn(opcode, args, gpu, ram),
+        }
+    }
+
 
     pub fn update(&mut self, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         // Fetch the next instruction from memory
@@ -191,7 +217,7 @@ impl Cpu {
         }
     }
 
-    pub fn get_register(&self, index: usize) -> Result<u8, CpuError> {
+    pub fn get_register(&self, index: usize) -> Result<VariableRegisterType, CpuError> {
         match self.registers.get(index) {
             Ok(value) => Ok(value),
             Err(_) => Err(CpuError::GetRegisterError(index)), // Handle out of bounds error
@@ -233,37 +259,23 @@ impl Cpu {
         }
     }
 
-    pub fn reset(&mut self) {
-        // Reset CPU state
-        self.program_counter = PROGRAM_COUNTER_START; // Reset program counter to start
-        self.stack.reset(); // Clear the stack
-        self.registers.reset(); // Reset all registers to 0
-        self.index_register = 0; // Reset index register to 0
-        self.delay_timer = 0; // Reset delay timer to 0
-        self.sound_timer = 0; // Reset sound timer to 0
-    }
-
-    pub fn decode(&self, instruction: u16) -> (u8, u16) {
-        let opcode = self.decoder.opcode(instruction);
-        let args = self.decoder.args(instruction);
-        debug!("\nDecoded instruction: 0x{:04X} -> Opcode: 0x{:02X}, Args: 0x{:04X}", instruction, opcode, args);
-        (opcode, args)
-    }
-
-    pub fn execute(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
-        let category = match self.decoder.extraction_category(opcode) {
-            Ok(cat) => cat,
-            Err(e) => return Err(e),
-        };
-
-        // just trying to distribute according to how we split the instructions
-        match category {
-            CodeCategories::NNN => self.nnn(opcode, args, gpu, ram),
-            CodeCategories::XNN => self.xnn(opcode, args, gpu, ram),
-            _ => self.xyn(opcode, args, gpu, ram),
+    pub fn is_key_pressed(&self, key: u8) -> bool {
+        // Check if a specific key is pressed
+        if key < NUMBER_OF_KEYS as u8 {
+            self.keyboard_buffer[key as usize] > 0
+        } else {
+            false // Invalid key index
         }
     }
 
+    pub fn is_key_released(&self, key: u8) -> bool {
+        // Check if a specific key is released
+        if key < NUMBER_OF_KEYS as u8 {
+            self.keyboard_buffer[key as usize] == 0
+        } else {
+            false // Invalid key index
+        }
+    }
 
     pub fn nnn(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         match OpCodes(opcode)  {
@@ -282,8 +294,8 @@ impl Cpu {
 
         // execute the instruction based on the opcode
         match OpCodes(opcode) {
-            OpCodes::SkipIfEqual => self.skip_if_equal(register as usize, number), // 0x3XNN
-            OpCodes::SkipIfUnequal => self.skip_if_unequal(register as usize, number), // 0x4XNN
+            OpCodes::SkipIfEqualRegVal => self.skip_if_equal(register as usize, number), // 0x3XNN
+            OpCodes::SkipIfUnequalRegVal => self.skip_if_unequal(register as usize, number), // 0x4XNN
             OpCodes::SetRegister => self.set_register(register as usize, number), // 0x6XNN
             OpCodes::AddToRegister => self.add_to_register(register as usize, number), // 0x7XNN
             // 0xCXNN
@@ -300,23 +312,27 @@ impl Cpu {
         // execute the instruction based on the opcode
         match OpCodes(opcode) {
             // 0x5XY0
+            OpCodes::SkipIfEqualRegReg => self.skip_if_equal_registers(register_0 as usize, register_1 as usize), // 0x5XY0
             // 0x8XYN
             OpCodes::RegisterOperations => self.reg_ops(register_0 as usize, register_1 as usize, number, gpu, ram), // 0x8XYN
             // 0x9XY0
+            OpCodes::SkipIfUnequalRegReg => self.skip_if_unequal_registers(register_0 as usize, register_1 as usize), // 0x9XY0
+            // 0xDXYN
             OpCodes::Draw => self.draw_sprite_at(register_0, register_1, number, gpu, ram), // 0xDXYN
             _ => Err(CpuError::InvalidOpcode(opcode)),
         }
     }
 
+    /* 0x0??? ---------------------------------------------------------------------- */
+
     pub fn zero(&mut self, args: u16, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
-        match FunctionCodes(args) {
+        match FunctionCodes((args & 0x00FF) as u8) {
             FunctionCodes::ClearDisplay => self.clear_display(gpu, ram), // 0x00E0
             FunctionCodes::ReturnFromSubroutine => self.return_from_subroutine(), // 0x00EE
             _ => self.call_routine_at(args), // Call a subroutine at the given address
         }
     }
 
-    /* 0x0??? ---------------------------------------------------------------------- */
 
     // 0x00E0
     pub fn clear_display(&mut self, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
@@ -467,11 +483,56 @@ impl Cpu {
         let value_0 = self.get_register(register_0)?;
         let value_1 = self.get_register(register_1)?;
 
-        // match number {
-        //     RegisterOperations::SetToSecond => {}
-        // }
+        // here the number is used to determine the operation
+        match RegisterOperations(number) {
+            RegisterOperations::SetToSecond => {
+                self.set_register(register_0, value_1)?;
+            },
+            RegisterOperations::OrEqual => {
+                let result = value_0 | value_1;
+                self.set_register(register_0, result)?;
+            },
+            RegisterOperations::AndEqual => {
+                let result = value_0 & value_1;
+                self.set_register(register_0, result)?;
+            },
+            RegisterOperations::XorEqual => {
+                let result = value_0 ^ value_1;
+                self.set_register(register_0, result)?;
+            },
+            RegisterOperations::AddEqual => {
+                let result = value_0.wrapping_add(value_1);
+                self.set_register(register_0, result)?;
+            },
+            RegisterOperations::SubtractEqual => {
+                let result = value_0.wrapping_sub(value_1);
+
+                self.registers.set_carry_flag((value_0 >= value_1) as u8); // Set carry flag if no underflow
+
+                self.set_register(register_0, result)?;
+            },
+            RegisterOperations::ShiftRightEqual => {
+                let result = value_0 >> 1;
+                self.set_register(register_0, result)?;
+            },
+            RegisterOperations::SetToSecondMinusFirst => {
+                let result = value_1.wrapping_sub(value_0);
+
+                self.registers.set_carry_flag((value_1 >= value_0) as u8); // Set carry flag if no underflow
+
+                self.set_register(register_0, result)?;
+            },
+            RegisterOperations::ShiftLeftEqual => {
+                let result = value_0 << 1;
+                self.set_register(register_0, result)?;
+            },
+            _ => {return Err(CpuError::InvalidRegisterOperation(number));}, // Handle invalid operation
+        }
+
         Ok(())
     }
+
+
     /* 0x9??? ---------------------------------------------------------------------- */
 
     pub fn skip_if_unequal_registers(&mut self, register_0: usize, register_1: usize) -> Result<(), CpuError> {
@@ -509,7 +570,29 @@ impl Cpu {
 
     /* 0xB??? ---------------------------------------------------------------------- */
 
+    pub fn jump_addres_plus_v0(&mut self, address: u16) -> Result<(), CpuError> {
+        // Jump to the address specified by the offset from the index register
+        let address = self.get_register(0)? as u16 + (address & 0x0FFF);
+
+        debug!("Jumping to address with offset: 0x{:04X}", address);
+
+        if address >= DISPLAY_START_ADDRESS as u16 {
+            return Err(CpuError::InvalidJump(address)); // Invalid address for program counter
+        }
+
+        self.program_counter = address;
+
+        Ok(())
+    }
+
     /* 0xC??? ---------------------------------------------------------------------- */
+
+    pub fn random(&mut self, register: usize, mask: u8) -> Result<(), CpuError> {
+        // Generate a random number and store it in the specified register
+        let random_value = rand::random::<u8>() & mask; // Apply the mask to the random value
+        debug!("Setting register {} to random value: {}", register, random_value);
+        self.set_register(register, random_value)
+    }
 
     /* 0xD??? ---------------------------------------------------------------------- */
     pub fn draw_sprite_at(&mut self, x: u8, y: u8, sprite_height: u8, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
@@ -535,6 +618,41 @@ impl Cpu {
         Ok(())
     }
 
+    /* 0xE??? ---------------------------------------------------------------------- */
+    pub fn key_operations(&mut self, func_code: u8, register: usize) -> Result<(), CpuError> {
+        let value_0 = self.get_register(register)?;
+        // Handle key operations based on the opcode
+        match FunctionCodes(func_code) {
+            FunctionCodes::SkipIfKeyPressed => self.skip_if_key_pressed(value_0), // 0xEX9E
+            FunctionCodes::SkipIfKeyNotPressed => self.skip_if_key_not_pressed(value_0), // 0xEXA1
+            _ => Err(CpuError::InvalidOpcode(func_code)), // Handle invalid opcode
+        }
+    }
+
+    pub fn skip_if_key_pressed(&mut self, key_id: VariableRegisterType) -> Result<(), CpuError> {
+        debug!("Skipping next instruction if key {} is pressed", key_id);
+        // Skip the next instruction if the key corresponding to the value in the specified register is pressed
+        if self.is_key_pressed(key_id) {
+            self.increment_program_counter()?; // Skip next instruction
+        }
+
+        Ok(())
+    }
+
+    pub fn skip_if_key_not_pressed(&mut self, key_id: VariableRegisterType) -> Result<(), CpuError> {
+        debug!("Skipping next instruction if key {} is not pressed", key_id);
+        // Skip the next instruction if the key corresponding to the value in the specified register is not pressed
+        if self.is_key_released(key_id) {
+            self.increment_program_counter()?; // Skip next instruction
+        }
+
+        Ok(())
+    }
+
+
     /* 0xF??? ---------------------------------------------------------------------- */
+
+
+
 
 }
