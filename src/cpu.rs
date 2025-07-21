@@ -652,6 +652,55 @@ impl Cpu {
 
     /* 0xF??? ---------------------------------------------------------------------- */
 
+    pub fn set_reg_to_delay(&mut self, register: usize) -> Result<(), CpuError> {
+        let delay_value = self.delay_timer;
+        debug!("Setting register {} to delay timer value: {}", register, delay_value);
+        self.set_register(register, delay_value)
+    }
+
+    pub fn set_reg_to_key(&mut self, register: usize) -> Result<(), CpuError> {
+        // block until a key is pressed and set the register to the key value
+        // todo:
+        debug!("Setting register {} to key value: {}", register, 0);
+        self.set_register(register,0)
+    }
+
+    pub fn set_delay_to_reg(&mut self, register: usize) -> Result<(), CpuError> {
+        let value = self.get_register(register)?;
+        debug!("Setting delay timer to register {} value: {}", register, value);
+        self.set_delay_timer(value as DelayTimerType);
+        Ok(())
+    }
+
+    pub fn set_sound_to_reg(&mut self, register: usize) -> Result<(), CpuError> {
+        let value = self.get_register(register)?;
+        debug!("Setting sound timer to register {} value: {}", register, value);
+        self.set_sound_timer(value as SoundTimerType);
+        Ok(())
+    }
+
+    pub fn add_index_to_reg(&mut self, register: usize) -> Result<(), CpuError> {
+        let value = self.get_register(register)?;
+        debug!("Adding index register value {} to register {}", self.index_register, register);
+        let new_value = self.index_register.wrapping_add(value as IndexRegisterType); // Ensure it's a 12-bit value
+        self.set_index_register(new_value)?;
+        Ok(())
+    }
+
+    pub fn set_index_reg_to_char(&mut self, register: usize) -> Result<(), CpuError> {
+        // Set the index register to the address of the character corresponding to the value in the specified register
+        // todo!("Implement set_index_reg_to_char");
+        // let value = self.get_register(register)?;
+        // debug!("Setting index register to character address for register {} value: {}", register, value);
+        // if value > 0xF {
+        //     return Err(CpuError::InvalidCharacterRegister(value)); // Handle invalid character register
+        // }
+
+        // self.index_register = (value as IndexRegisterType) * 5; // Each character is 5 bytes
+
+        Ok(())
+    }
+
 
 
 
