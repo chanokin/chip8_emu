@@ -516,8 +516,10 @@ impl Cpu {
                 self.set_register(register_0, result)?;
             },
             RegisterOperations::ShiftRightEqual => {
+                let least_significant_bit = value_0 & 0x1;
                 let result = value_0 >> 1;
                 self.set_register(register_0, result)?;
+                self.registers.set_carry_flag(least_significant_bit); // Set carry flag to least significant bit
             },
             RegisterOperations::SetToSecondMinusFirst => {
                 let result = value_1.wrapping_sub(value_0);
@@ -527,8 +529,10 @@ impl Cpu {
                 self.set_register(register_0, result)?;
             },
             RegisterOperations::ShiftLeftEqual => {
+                let most_significant_bit = (value_0 >> 7) & 0x1;
                 let result = value_0 << 1;
                 self.set_register(register_0, result)?;
+                self.registers.set_carry_flag(most_significant_bit); // Set carry flag to most significant bit
             },
             _ => {return Err(CpuError::InvalidRegisterOperation(number));}, // Handle invalid operation
         }
