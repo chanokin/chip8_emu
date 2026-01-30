@@ -277,6 +277,7 @@ impl Cpu {
         }
     }
 
+    // Dispatch functions based on instruction categories with a 12-bit number (NNN)
     pub fn nnn(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         match OpCodes(opcode)  {
             OpCodes::Zero => self.zero(args, gpu, ram), // 0x0NNN
@@ -288,6 +289,7 @@ impl Cpu {
 
     }
 
+    // Dispatch functions with an 8-bit number (NN) and a register (X)
     pub fn xnn(&mut self, opcode: u8, args: u16, _gpu: &mut Gpu, _ram: &mut Ram) -> Result<(), CpuError> {
         // Extract the register and number from the arguments
         let (register, number) = self.decoder.xnn(args);
@@ -305,6 +307,7 @@ impl Cpu {
         }
     }
 
+    // Dispatch functions with two registers (X, Y) and a number (N)
     pub fn xyn(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         // Extract the two registers and the number from the arguments
         let (register_0, register_1, number) = self.decoder.xyn(args);
@@ -343,6 +346,7 @@ impl Cpu {
         }
     }
 
+    // 0x00EE
     pub fn return_from_subroutine(&mut self) -> Result<(), CpuError> {
         debug!("Returning from subroutine");
         // Return from a subroutine by popping the address from the stack
