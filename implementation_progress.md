@@ -36,16 +36,33 @@
     - [x] 0x8XY7 Set value of Reg X with the Subtraction of the values in Regs Y and X [V(X) = V(Y) - V(X)] Set VF to 0 if underflow, otherwise to 1
     - [x] 0x8XYE Left shift by one the value of Reg X and store the MSB of value (prior to shift) to VF
 
-  - [ ] 0x9
+  - [x] 0x9
+    - [x] 0x9XY0 Skip next instruction if the values of Regs X and Y are Not Equal
 
-  - [ ] 0xA
+  - [x] 0xA
+    - [x] 0xANNN Set the Index Reg to the address/value NNN
 
-  - [ ] 0xB
+  - [x] 0xB
+    - [x] 0xBNNN Jump to address NNN plus V0
 
-  - [ ] 0xC
+  - [x] 0xC
+    - [x] 0xCXNN Set the value of Reg X to a random number between 0 and 255 (inclusive), and mask it with NN
 
-  - [ ] 0xD
+  - [x] 0xD
+    - [x] 0xDXYN Draw a sprite at coordinate [V(X), V(Y)] (values of Regs X, Y). The sprite has an 8 pixels width and an N pixels height.
 
   - [ ] 0xE
+    - [ ] 0xEX9E Skip instruction if the key stored in Reg X is being pressed.
+    - [ ] 0xEXA1 Skip instruction if the key stored in Reg X is NOT being pressed.
 
   - [ ] 0xF
+    - [x] 0xFX07 Set the value of Reg X to the Delay timer value.
+    - [ ] 0xFX0A Set the value of Reg X to the value of the key pressed [blocking!].
+    - [x] 0xFX15 Set Delay timer to the value of Reg X
+    - [x] 0xFX18 Set Sound timer to the value of Reg X
+    - [x] 0xFX1E Add the value of Reg X to the Index Reg. [VF not affected!]
+    - [ ] 0xFX29 Set the Index Reg to the location of the sprite for the character in Reg X
+    - [ ] 0xFX33 Store the BCD of the value in Reg X into the Index Reg I(+0,+1,+2) = BCD(VX|3,2,1)
+    - [ ] 0xFX55 Dump registers from 0 to X (inclusive) into the Index Reg I(+0,...,+X) = V(0,...,X)
+    - [ ] 0xFX65 Load the Index Reg into registers from 0 to X (inclusive)  V(0,...,X) = I(+0,...,+X)
+
