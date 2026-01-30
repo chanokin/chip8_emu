@@ -25,15 +25,16 @@
   - [x] 0x7
     - [x] 0x7XNN Add NN to the value in Reg X (carry flag not altered)
 
-  - [ ] 0x8
+  - [x] 0x8
     - [x] 0x8XY0 Set value of Reg X with the value of Reg Y
     - [x] 0x8XY1 Set value of Reg X with the bitwise OR of the values in Regs X and Y [V(X) = V(X) | V(Y)]
-    - [x] 0x8XY3 Set value of Reg X with the bitwise AND of the values in Regs X and Y [V(X) = V(X) & V(Y)]
-    - [x] 0x8XY4 Set value of Reg X with the bitwise XOR of the values in Regs X and Y [V(X) = V(X) ^ V(Y)]
-    - [ ] 0x8XY5
-    - [ ] 0x8XY6
-    - [ ] 0x8XY7
-    - [ ] 0x8XYE
+    - [x] 0x8XY2 Set value of Reg X with the bitwise AND of the values in Regs X and Y [V(X) = V(X) & V(Y)]
+    - [x] 0x8XY3 Set value of Reg X with the bitwise XOR of the values in Regs X and Y [V(X) = V(X) ^ V(Y)]
+    - [x] 0x8XY4 Set value of Reg X with the Addition of the values in Regs X and Y [V(X) = V(X) + V(Y)] Set VF to 1 on overflow, otherwise to 0
+    - [x] 0x8XY5 Set value of Reg X with the Subtraction of the values in Regs X and Y [V(X) = V(X) - V(Y)] Set VF to 0 if underflow, otherwise to 1
+    - [x] 0x8XY6 Right shift by one the value of Reg X and store the LSB of value (prior to shift) to VF
+    - [x] 0x8XY7 Set value of Reg X with the Subtraction of the values in Regs Y and X [V(X) = V(Y) - V(X)] Set VF to 0 if underflow, otherwise to 1
+    - [x] 0x8XYE Left shift by one the value of Reg X and store the MSB of value (prior to shift) to VF
 
   - [ ] 0x9
 
