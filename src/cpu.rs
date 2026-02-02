@@ -481,7 +481,7 @@ impl Cpu {
 
     /* 0x8??? ---------------------------------------------------------------------- */
     // a lot of operations are needed here
-    pub fn reg_ops(&mut self, register_0: usize, register_1: usize, number: u8, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
+    pub fn reg_ops(&mut self, register_0: usize, register_1: usize, number: u8, _gpu: &mut Gpu, _ram: &mut Ram) -> Result<(), CpuError> {
         debug!("Performing register operation with registers {} and {}, number {}", register_0, register_1, number);
         // Perform operations based on the opcode
         let value_0 = self.get_register(register_0)?;
@@ -695,7 +695,7 @@ impl Cpu {
         Ok(())
     }
 
-    pub fn set_index_reg_to_char(&mut self, register: usize) -> Result<(), CpuError> {
+    pub fn set_index_reg_to_char(&mut self, _register: usize) -> Result<(), CpuError> {
         // Set the index register to the address of the character corresponding to the value in the specified register
         // todo!("Implement set_index_reg_to_char");
         // let value = self.get_register(register)?;
