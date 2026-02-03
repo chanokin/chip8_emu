@@ -1,62 +1,57 @@
 pub use chip8_emu::Machine;
-use ncurses::*;
-use crossterm::event;
-use std::{time::Duration, io};
+use std::io::{self, Write};
+use std::{thread, time::Duration};
 
-const POLLING_DURATION: Duration = Duration::from_millis(100);
+use minifb::{Key, Window, WindowOptions};
 
-fn get_key(polling_duration: Duration) -> io::Result<char> {
-    if event::poll(polling_duration)? {
-        // It's guaranteed that the `read()` won't block when the `poll()`
-        // function returns `true`
-        match event::read()? {
-            event::Event::Key(event) => {
-                if let event::KeyCode::Char(c) = event.code {
-                    return Ok(c);
-                }
-            },
-            _ => (),
-        }
-    }
-    Ok('\0') // Return null character if no key was pressed
-}
+const WIDTH: usize = 64;
+const HEIGHT: usize = 32;
 
-fn main() -> Result<()> {
+// fn get_key(device_state: &DeviceState) -> Result<Vec<Keycode>> {
+//     let keys = device_state.get_keys();
+//     Ok(keys)
+// }
+
+fn main(){
+
     println!("Hello, world!");
+    io::stdout().flush().unwrap();
+
+
     let mut machine = Machine::new();
     machine.reset();
 
-    let mut screen = Screen::init()?;
-    screen.keypad(true);  // Enable special keys
-    screen.noecho()?;     // Don't echo input
-    screen.cbreak()?;     // Disable line buffering
+    let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
 
-    // Create a window (height, width, y, x)
-    let mut win = screen.newwin(10, 40, 5, 10)?;
+    let mut window = Window::new(
+        "Rust Chip-8 Emulator",
+        WIDTH * 10, // Scale up so it's not tiny
+        HEIGHT * 10,
+        WindowOptions::default(),
+    ).unwrap();
 
-    // Draw a border
-    win.box_(0, 0)?;
-    // Add content
-    win.mvaddstr(1, 2, "Window Title")?;
-    win.mvaddstr(3, 2, "This is a window!")?;
+    // Limit to ~60fps for the display loop
+    window.set_target_fps(60);
 
 
-    loop {
-        let msg = get_key(POLLING_DURATION)?;
-        // let ch = screen.getch()?;
-        if msg == 'q' {
-            break;
+    while window.is_open() && !window.is_key_down(Key::Escape) {
+        // --- INPUT HANDLING ---
+        // Chip-8 uses a 16-key pad. Check state of each:
+        let mut keys_pressed = [false; 16];
+        if window.is_key_down(Key::Key1) { keys_pressed[0x1] = true; }
+        if window.is_key_down(Key::X)    { keys_pressed[0x0] = true; }
+        // ... map the rest of the 16 keys ...
+
+        // --- EMULATION STEP ---
+        // Your_Chip8_Core.tick(keys_pressed);
+
+        // --- RENDER STEP ---
+        // Convert your internal 1-bit/bool array to u32 (RGB) colors
+        for (i, pixel) in buffer.iter_mut().enumerate() {
+            *pixel = if i % 2 == 0 { 0xFFFFFF } else { 0x000000 }; // Example pattern
         }
 
-
-        win.mvaddstr(5, 2, &format!("You pressed: {}   ", msg))?;
-
-        // screen.clear()?;
-
-        screen.refresh()?;
-        screen.wrefresh(&mut win)?;
-
+        window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
     }
 
-    Ok(())
 }

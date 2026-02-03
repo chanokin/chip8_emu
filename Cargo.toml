@@ -5,8 +5,7 @@ edition = "2024"
 rust-version = "1.93.0"
 
 [dependencies]
-ncurses-pure = {git = "https://github.com/runlevel5/ncurses-pure-rs.git"}
 log = "0.4.27"
+minifb = "0.28.0"
 rand = "0.9.2"
-crossterm = "0.29.0"
 
