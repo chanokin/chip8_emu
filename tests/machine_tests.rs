@@ -88,7 +88,7 @@ mod tests {
             Err(e) => panic!("Failed to load program: {:?}", e),
         }
 
-        assert!(machine.run(Some(30)).is_ok(), "should be able to run the machine");
+        assert!(machine.run(Some(30), [false; 16]).is_ok(), "should be able to run the machine");
         let logo: Vec<u8> = vec![
             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

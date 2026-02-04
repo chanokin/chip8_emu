@@ -1,8 +1,8 @@
 pub use chip8_emu::Machine;
+pub use chip8_emu::GUI;
 use std::io::{self, Write};
-use std::{thread, time::Duration};
 
-use minifb::{Key, Window, WindowOptions};
+
 
 const WIDTH: usize = 64;
 const HEIGHT: usize = 32;
@@ -22,36 +22,23 @@ fn main(){
     machine.reset();
 
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
-
-    let mut window = Window::new(
-        "Rust Chip-8 Emulator",
-        WIDTH * 10, // Scale up so it's not tiny
-        HEIGHT * 10,
-        WindowOptions::default(),
-    ).unwrap();
-
-    // Limit to ~60fps for the display loop
-    window.set_target_fps(60);
-
-
-    while window.is_open() && !window.is_key_down(Key::Escape) {
+    let mut gui = GUI::new(10, 60); // scale 10x, 60 FPS
+    let mut loop_index = 0;
+    while gui.keep_running() {
         // --- INPUT HANDLING ---
         // Chip-8 uses a 16-key pad. Check state of each:
-        let mut keys_pressed = [false; 16];
-        if window.is_key_down(Key::Key1) { keys_pressed[0x1] = true; }
-        if window.is_key_down(Key::X)    { keys_pressed[0x0] = true; }
-        // ... map the rest of the 16 keys ...
-
+        let keys_pressed = gui.key_state();
         // --- EMULATION STEP ---
         // Your_Chip8_Core.tick(keys_pressed);
-
+        machine.step(keys_pressed).expect(&format!("Failed to execute step {}", loop_index)); // Handle errors properly in production code
         // --- RENDER STEP ---
         // Convert your internal 1-bit/bool array to u32 (RGB) colors
         for (i, pixel) in buffer.iter_mut().enumerate() {
             *pixel = if i % 2 == 0 { 0xFFFFFF } else { 0x000000 }; // Example pattern
         }
 
-        window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
+        gui.update_with_buffer(&buffer);
+        loop_index += 1;
     }
 
 }

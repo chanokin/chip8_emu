@@ -71,8 +71,8 @@ impl Machine {
         Ok(())
     }
 
-    pub fn step(&mut self) -> Result<(), MachineError> {
-        match self.cpu.update(&mut self.gpu, &mut self.ram) {
+    pub fn step(&mut self, key_state: [bool; 16]) -> Result<(), MachineError> {
+        match self.cpu.update(&mut self.gpu, &mut self.ram, key_state) {
             Ok(_) => Ok(()),
             Err(e) => {
                 Err(MachineError::CpuError(e))
@@ -81,7 +81,7 @@ impl Machine {
 
     }
 
-    pub fn run(&mut self, max_loops:Option<i64>) -> Result<(), MachineError> {
+    pub fn run(&mut self, max_loops:Option<i64>, key_state: [bool; 16]) -> Result<(), MachineError> {
         let max_loops = match max_loops {
             Some(value) if value > 0 => value,
             _ => MAX_LOOP_COUNT, // Default to MAX_LOOP_COUNT if no valid max_loops is provided
@@ -93,7 +93,7 @@ impl Machine {
                 break;
             }
 
-            self.step()?;
+            self.step(key_state)?;
 
             loop_count += 1;
             if loop_count == max_loops {
