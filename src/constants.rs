@@ -42,6 +42,7 @@ pub static OPCODE_MASK: u16 = 0xF000; // Mask for the opcode (upper 4 bits)
 
 
 // the opcode requires a single 12-bit number from the instruction
+#[derive(Clone,Copy,Debug,PartialEq,Eq)]
 pub enum CodeCategories {
     NNN, // 12-bit number
     XNN, // 8-bit value and a number

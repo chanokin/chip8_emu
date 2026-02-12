@@ -151,6 +151,7 @@ impl Gpu {
         Ok(set_vf_to_true)
     }
 
+
     pub fn buffer_as_u8(&self, ram: &Ram) -> Result<Vec<Vec<u8>>, DisplayError> {
         let mut buffer = Vec::with_capacity(DISPLAY_HEIGHT);
 
