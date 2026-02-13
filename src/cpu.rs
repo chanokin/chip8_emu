@@ -660,7 +660,7 @@ impl Cpu {
 
     /* 0xF??? ---------------------------------------------------------------------- */
 
-    pub fn miscellaneous(&mut self, register: usize, func_code: u8, ram: &mut Ram, key_state: [bool; 16]) -> Result<(), CpuError> {
+    pub fn miscellaneous(&mut self, register: usize, func_code: u8, _ram: &mut Ram, key_state: [bool; 16]) -> Result<(), CpuError> {
         // Handle miscellaneous operations based on the opcode
         match MiscellaneousOperations(func_code) {
             MiscellaneousOperations::GetDelay => self.set_reg_to_delay(register), // 0xFX07
@@ -679,7 +679,7 @@ impl Cpu {
         self.set_register(register, delay_value)
     }
 
-    pub fn set_reg_to_key(&mut self, register: usize, key_state: [bool; 16]) -> Result<(), CpuError> {
+    pub fn set_reg_to_key(&mut self, register: usize, _key_state: [bool; 16]) -> Result<(), CpuError> {
         // block until a key is pressed and set the register to the key value
         // todo:
         debug!("Setting register {} to key value: {}", register, 0);
