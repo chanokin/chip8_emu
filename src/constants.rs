@@ -42,6 +42,7 @@ pub static OPCODE_MASK: u16 = 0xF000; // Mask for the opcode (upper 4 bits)
 
 
 // the opcode requires a single 12-bit number from the instruction
+#[derive(Clone,Copy,Debug,PartialEq,Eq)]
 pub enum CodeCategories {
     NNN, // 12-bit number
     XNN, // 8-bit value and a number
@@ -68,7 +69,7 @@ impl OpCodes {
     pub const Random:OpCodes = OpCodes(0xC);
     pub const Draw:OpCodes = OpCodes(0xD);
     pub const KeyOperations:OpCodes = OpCodes(0xE);
-    pub const MemoryOperations:OpCodes = OpCodes(0xF);
+    pub const Miscellaneous:OpCodes = OpCodes(0xF);
 }
 
 
@@ -101,6 +102,26 @@ impl RegisterOperations {
     pub const SetToSecondMinusFirst: RegisterOperations = RegisterOperations(0x7);
     pub const ShiftLeftEqual: RegisterOperations = RegisterOperations(0xE);
 }
+
+
+#[derive(Clone,Copy,Debug,PartialEq,Eq)]
+pub struct MiscellaneousOperations(pub u8);
+
+#[allow(non_upper_case_globals)]
+impl MiscellaneousOperations {
+    pub const GetDelay: MiscellaneousOperations = MiscellaneousOperations(0x07);
+    pub const GetKey: MiscellaneousOperations = MiscellaneousOperations(0x0A);
+    pub const SetDelayTimer: MiscellaneousOperations = MiscellaneousOperations(0x15);
+    pub const SetSoundTimer: MiscellaneousOperations = MiscellaneousOperations(0x18);
+    pub const AddToIndexRegister: MiscellaneousOperations = MiscellaneousOperations(0x1E);
+    pub const SetSpriteAddress: MiscellaneousOperations = MiscellaneousOperations(0x29);
+    pub const StoreBCD: MiscellaneousOperations = MiscellaneousOperations(0x33);
+    pub const StoreRegisters: MiscellaneousOperations = MiscellaneousOperations(0x55);
+    pub const LoadRegisters: MiscellaneousOperations = MiscellaneousOperations(0x65);
+}
+
+
+
 
 
 pub static MAX_LOOP_COUNT: i64 = 1000000; // Maximum loop count to prevent infinite loops

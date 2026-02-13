@@ -1,7 +1,7 @@
 use chip8_emu::machine::Machine;
 use chip8_emu::rom_reader::Reader;
-use chip8_emu::renderer::TextRenderer;
-use chip8_emu::renderer::Show;
+// use chip8_emu::renderer::TextRenderer;
+// use chip8_emu::renderer::Show;
 use log;
 
 #[cfg(test)]
@@ -88,7 +88,7 @@ mod tests {
             Err(e) => panic!("Failed to load program: {:?}", e),
         }
 
-        assert!(machine.run(Some(30)).is_ok(), "should be able to run the machine");
+        assert!(machine.run(Some(30), [false; 16]).is_ok(), "should be able to run the machine");
         let logo: Vec<u8> = vec![
             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -125,8 +125,8 @@ mod tests {
         ];
         let image = machine.gpu.buffer_as_u8(&machine.ram).expect("should be able to get GPU buffer");
 
-        for (row_idx, row) in image.iter().enumerate() {
-            for (col_idx, pixel) in row.iter().enumerate() {
+        for (_row_idx, row) in image.iter().enumerate() {
+            for (_col_idx, pixel) in row.iter().enumerate() {
                 let output = if *pixel == 1 { "█" } else { " " };
                 print!("{}", output);
             }
