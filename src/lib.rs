@@ -10,6 +10,7 @@ pub mod cpu;
 pub mod rom_reader;
 pub mod renderer;
 pub mod gui;
+pub mod app;
 
 pub use ram::Ram;
 pub use registers::Registers;
@@ -20,4 +21,4 @@ pub use cpu::Cpu;
 pub use rom_reader::Reader;
 pub use renderer::TextRenderer;
 pub use gui::GUI;
-
+pub use app::App;
