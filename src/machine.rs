@@ -29,7 +29,9 @@ impl Machine {
         };
 
         machine.reset();
-        machine.load_font();
+
+        // todo: should we load the font here?
+        // machine.load_font();
 
         machine
     }

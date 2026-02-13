@@ -18,7 +18,7 @@ impl Ram {
     }
 
     pub fn reset(&mut self) {
-        self.memory = [0; MEMORY_SIZE];
+        self.memory.fill(0);
     }
 
     pub fn get(&self, address: usize) -> Result<MemoryType, MemoryError> {
@@ -41,10 +41,34 @@ impl Ram {
         Ok(self.memory[address..address + size].to_vec())
     }
 
+    pub fn set_range_font(&mut self, address: u16, size: usize, values: &[u8]) -> Result<(), MemoryError> {
+        let address = address as usize;
+        if address >= MEMORY_SIZE {
+            return Err(MemoryError::OutOfBounds);
+        }
+
+        if address + size > MEMORY_SIZE {
+            return Err(MemoryError::OutOfBounds);
+        }
+
+        for (i, &value) in values.iter().enumerate() {
+
+            if i >= size {
+                println!("Warning: Attempting to write beyond the specified size. Stopping write operation.");
+                break; // Prevent out of bounds write
+            }
+
+            self.memory[address + i] = value;
+        }
+
+        Ok(())
+    }
+
     pub fn set_range(&mut self, address: u16, size: usize, values: &[u8]) -> Result<(), MemoryError> {
         if address < PROGRAM_COUNTER_START {
             return Err(MemoryError::OutOfBounds);
         }
+
         let address = address as usize;
         if address >= MEMORY_SIZE {
             return Err(MemoryError::OutOfBounds);

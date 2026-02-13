@@ -66,7 +66,7 @@ mod tests {
         let sprite_data = vec![0b1111_0000, 0b0000_1111]; // Example sprite
         let address = 0x20;
 
-        let _ = ram.set_range(address, 2, sprite_data.as_slice())
+        let _ = ram.set_range_font(address, 2, sprite_data.as_slice())
             .expect("Failed to set sprite data in RAM");
 
         // Draw the sprite at (0, 0)

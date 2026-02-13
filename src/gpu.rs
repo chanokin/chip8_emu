@@ -101,9 +101,10 @@ impl Gpu {
 
         let current_value = self.get_pixel(x, y, ram)?;
 
-        self.set_pixel(x, y, !current_value, ram)?;
+        // flipped value xor-s the current value
+        self.set_pixel(x, y, current_value ^ 1u8, ram)?;
 
-        Ok(!current_value)
+        Ok(current_value ^ 1u8) // Return the flipped value
     }
 
     pub fn draw_sprite_at(&mut self, x: usize, y: usize, sprite_address: u16, sprite_height: u8, ram: &mut Ram) -> Result<bool, DisplayError> {
