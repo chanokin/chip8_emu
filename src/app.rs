@@ -18,7 +18,7 @@ impl App {
     pub fn run(&mut self) -> Result<(), String> {
         self.machine.reset();
 
-        let mut rom_loaded = false; // Load a ROM here, e.g.: // let rom_data = std::fs::read("path_to_rom.ch8").map_err(|e| format!("Failed to read ROM: {}", e))?; // self.machine.load_program(&rom_data).map_err(|e| format!("Failed to load ROM: {:?}", e))?; // rom_loaded = true; if !rom_loaded { return Err("No ROM loaded. Please load a ROM before running the emulator.".to_string()); }
+        let mut rom_loaded = false; //
 
         let mut buffer: Vec<u32> = vec![0; DISPLAY_WIDTH * DISPLAY_HEIGHT];
         let mut loop_index = 0;
