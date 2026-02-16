@@ -134,7 +134,7 @@ impl Cpu {
             Err(e) => return Err(e),
         };
 
-        println!("\tExecuting opcode: 0x{:02X} in category: {:?}", opcode, category);
+        debug!("\tExecuting opcode: 0x{:02X} in category: {:?}", opcode, category);
 
         // just trying to distribute according to how we split the instructions
         match category {
@@ -151,7 +151,7 @@ impl Cpu {
 
         // Decode the instruction
         let (opcode, args) = self.decode(instruction);
-        println!("-> Executing instruction at PC: 0x{:04X} -> Opcode: 0x{:02X}, Args: 0x{:04X}",
+        debug!("-> Executing instruction at PC: 0x{:04X} -> Opcode: 0x{:02X}, Args: 0x{:04X}",
                  self.program_counter - 2, opcode, args);
         // Execute the instruction
         self.execute(opcode, args, gpu, ram, key_state)?;
@@ -281,7 +281,7 @@ impl Cpu {
 
     // Dispatch functions based on instruction categories with a 12-bit number (NNN)
     pub fn nnn(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram, _key_state: [bool; 16]) -> Result<(), CpuError> {
-        println!("\tExecuting opcode: 0x{:02X} in category: NNN with args: 0x{:04X}", opcode, args);
+        debug!("\tExecuting opcode: 0x{:02X} in category: NNN with args: 0x{:04X}", opcode, args);
         match OpCodes(opcode)  {
             OpCodes::Zero => self.zero(args, gpu, ram), // 0x0NNN
             OpCodes::Jump => self.jump_to(args), // 0x1NNN

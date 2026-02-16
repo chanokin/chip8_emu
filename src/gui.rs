@@ -1,10 +1,6 @@
-use minifb::{Key, Window, WindowOptions, Menu};
+use minifb::{Key, Window, WindowOptions};
 use crate::constants::{DISPLAY_WIDTH, DISPLAY_HEIGHT};
-
-const _MENU_ID: usize = 1;
-const _LOAD_ROM_ID: usize = 2;
-const _EXIT_ID: usize = 3;
-const _CLOSE_MENU_ID: usize = 4;
+use dialog::DialogBox;
 
 
 pub struct GUI {
@@ -22,19 +18,6 @@ impl GUI {
             ).unwrap();
 
         window.set_target_fps(fps);
-
-        let mut menu = Menu::new("File").unwrap();
-
-        menu.add_item("Exit", _EXIT_ID)
-            .shortcut(Key::Escape, 0)
-            .build();
-
-        let _ = window.add_menu(&menu);
-
-        if let Some(menus) = window.get_posix_menus() {
-            println!("Menus {:?}", menus);
-        }
-
 
         GUI {
             window
@@ -65,6 +48,33 @@ impl GUI {
         self.window.update_with_buffer(buffer, DISPLAY_WIDTH, DISPLAY_HEIGHT)?;
         Ok(())
     }
+
+
+    pub fn trigger_open_rom(&self) -> bool {
+        self.window.is_key_pressed(Key::O, minifb::KeyRepeat::No)
+    }
+
+    pub fn trigger_machine_reset(&self) -> bool {
+        self.window.is_key_pressed(Key::I, minifb::KeyRepeat::No)
+    }
+
+    pub fn load_rom_from_dialog(&mut self) -> Result<String, String> {
+        // Use rfd crate to open a file dialog
+        let choice = dialog::FileSelection::new("Select a CHIP-8 ROM")
+            .title("Open ROM")
+            // .path("roms") // Start in the ROMs directory
+            .show()
+            .expect("Failed to open file dialog");
+
+        match choice {
+            Some(path) => {
+                Ok(path)
+            },
+            None => Err("No file selected".to_string()),
+
+        }
+    }
+
 
 }
 
