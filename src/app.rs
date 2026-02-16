@@ -41,6 +41,7 @@ impl App {
             }
 
             if self.gui.trigger_machine_reset() {
+                rom_loaded = false;
                 self.machine.reset();
                 println!("Machine reset!");
             }
