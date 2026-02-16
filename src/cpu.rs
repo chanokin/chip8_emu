@@ -1,7 +1,8 @@
 use crate::constants::{
     CodeCategories, DelayTimerType, FunctionCodes, IndexRegisterType, OpCodes, ProgramCounterType,
     RegisterOperations, SoundTimerType, VariableRegisterType, MiscellaneousOperations,
-    DISPLAY_START_ADDRESS, NUMBER_OF_KEYS, PROGRAM_COUNTER_START
+    DISPLAY_START_ADDRESS, NUMBER_OF_KEYS, PROGRAM_COUNTER_START,
+    MAP_KEY_STATE_TO_CHIP8
 };
 use crate::errors::{
     CpuError,
@@ -12,6 +13,10 @@ use crate::ram::Ram;
 use crate::stack::Stack;
 pub struct Decoder;
 use log::{debug, };
+
+
+
+
 
 impl Decoder {
     pub fn new() -> Self {
@@ -685,11 +690,11 @@ impl Cpu {
         self.set_register(register, delay_value)
     }
 
-    pub fn set_reg_to_key(&mut self, register: usize, _key_state: [bool; 16]) -> Result<(), CpuError> {
+    pub fn set_reg_to_key(&mut self, _register: usize, _key_state: [bool; 16]) -> Result<(), CpuError> {
         // block until a key is pressed and set the register to the key value
-        // todo:
-        debug!("Setting register {} to key value: {}", register, 0);
-        self.set_register(register,0)
+        todo!("Implement set_reg_to_key");
+        debug!("Setting register {} to key value: {}", _register, 0);
+        self.set_register(_register,0)
     }
 
     pub fn set_delay_to_reg(&mut self, register: usize) -> Result<(), CpuError> {
@@ -716,7 +721,7 @@ impl Cpu {
 
     pub fn set_index_reg_to_char(&mut self, _register: usize) -> Result<(), CpuError> {
         // Set the index register to the address of the character corresponding to the value in the specified register
-        // todo!("Implement set_index_reg_to_char");
+        todo!("Implement set_index_reg_to_char");
         // let value = self.get_register(register)?;
         // debug!("Setting index register to character address for register {} value: {}", register, value);
         // if value > 0xF {
@@ -735,9 +740,19 @@ impl Cpu {
         let tens = (value % 100) / 10;
         let ones = value % 10;
 
-        ram.set(self.index_register as usize, hundreds).expect("Failed to store hundreds digit in memory");
-        ram.set((self.index_register + 1) as usize, tens).expect("Failed to store tens digit in memory");
-        ram.set((self.index_register + 2) as usize, ones).expect("Failed to store ones digit in memory");
+        match ram.set(self.index_register as usize, hundreds) {
+            Ok(_) => (),
+            Err(e) => return Err(CpuError::MemoryError(e)), // Handle memory error
+        };
+
+        match ram.set((self.index_register + 1) as usize, tens) {
+            Ok(_) => (),
+            Err(e) => return Err(CpuError::MemoryError(e)), // Handle memory error
+        };
+        match ram.set((self.index_register + 2) as usize, ones) {
+            Ok(_) => (),
+            Err(e) => return Err(CpuError::MemoryError(e)), // Handle memory error
+        };
 
         Ok(())
     }

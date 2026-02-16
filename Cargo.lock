@@ -53,6 +53,7 @@ name = "chip8_emu"
 version = "0.2.0"
 dependencies = [
  "dialog",
+ "lazy_static",
  "log",
  "minifb",
  "rand",

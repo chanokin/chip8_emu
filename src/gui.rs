@@ -3,6 +3,7 @@ use crate::constants::{DISPLAY_WIDTH, DISPLAY_HEIGHT};
 use dialog::DialogBox;
 
 
+
 pub struct GUI {
     window: Window
 }
@@ -38,9 +39,26 @@ impl GUI {
 
     pub fn key_state(&self) -> [bool; 16] {
         let mut keys_pressed = [false; 16];
-        if self.window.is_key_down(Key::Key1) { keys_pressed[0x1] = true; }
-        if self.window.is_key_down(Key::X)    { keys_pressed[0x0] = true; }
-        // ... map the rest of the 16 keys ...
+        if self.window.is_key_down(Key::Key1) { keys_pressed[0x0] = true; }
+        if self.window.is_key_down(Key::Key2) { keys_pressed[0x1] = true; }
+        if self.window.is_key_down(Key::Key3) { keys_pressed[0x2] = true; }
+        if self.window.is_key_down(Key::Key4) { keys_pressed[0x3] = true; }
+
+        if self.window.is_key_down(Key::Q)    { keys_pressed[0x4] = true; }
+        if self.window.is_key_down(Key::W)    { keys_pressed[0x5] = true; }
+        if self.window.is_key_down(Key::E)    { keys_pressed[0x6] = true; }
+        if self.window.is_key_down(Key::R)    { keys_pressed[0x7] = true; }
+
+        if self.window.is_key_down(Key::A)    { keys_pressed[0x8] = true; }
+        if self.window.is_key_down(Key::S)    { keys_pressed[0x9] = true; }
+        if self.window.is_key_down(Key::D)    { keys_pressed[0xA] = true; }
+        if self.window.is_key_down(Key::F)    { keys_pressed[0xB] = true; }
+
+        if self.window.is_key_down(Key::Z)    { keys_pressed[0xC] = true; }
+        if self.window.is_key_down(Key::X)    { keys_pressed[0xD] = true; }
+        if self.window.is_key_down(Key::C)    { keys_pressed[0xE] = true; }
+        if self.window.is_key_down(Key::V)    { keys_pressed[0xF] = true; }
+
         keys_pressed
     }
 
