@@ -55,9 +55,9 @@ impl Decoder {
             // 1 12-bit number (one output value)
             0x0 | 0x1 | 0x2 | 0xA | 0xB => Ok(CodeCategories::NNN),
             // 1 var register and 1 8-bit number (two output values)
-            0x3 | 0x4 | 0x6 | 0x7 | 0xC => Ok(CodeCategories::XNN),
+            0x3 | 0x4 | 0x6 | 0x7 | 0xC | 0xF => Ok(CodeCategories::XNN),
             // 2 var register and 1 4-bit number (three output values)
-            0x5 | 0x8 | 0x9 | 0xD | 0xE | 0xF => Ok(CodeCategories::XYN),
+            0x5 | 0x8 | 0x9 | 0xD | 0xE => Ok(CodeCategories::XYN),
             _ => Err(CpuError::InvalidOpcode(opcode)),
         }
     }
@@ -672,6 +672,9 @@ impl Cpu {
             MiscellaneousOperations::SetSoundTimer => self.set_sound_to_reg(register), // 0xFX18
             MiscellaneousOperations::AddToIndexRegister => self.add_index_to_reg(register), // 0xFX1E
             MiscellaneousOperations::SetSpriteAddress => self.set_index_reg_to_char(register), // 0xFX29
+            MiscellaneousOperations::StoreBCD => self.store_bcd(register, _ram), // 0xFX33
+            MiscellaneousOperations::StoreRegisters => self.store_registers(register, _ram), // 0xFX55
+            MiscellaneousOperations::LoadRegisters => self.load_registers(register, _ram), // 0xFX65
             _ => Err(CpuError::InvalidOpcode(func_code)), // Handle invalid opcode
         }
     }
@@ -721,6 +724,44 @@ impl Cpu {
         // }
 
         // self.index_register = (value as IndexRegisterType) * 5; // Each character is 5 bytes
+
+        Ok(())
+    }
+
+    pub fn store_bcd(&mut self, register: usize, ram: &mut Ram) -> Result<(), CpuError> {
+        let value = self.get_register(register)?;
+        debug!("Storing BCD of register {} value: {} at index register address", register, value);
+        let hundreds = value / 100;
+        let tens = (value % 100) / 10;
+        let ones = value % 10;
+
+        ram.set(self.index_register as usize, hundreds).expect("Failed to store hundreds digit in memory");
+        ram.set((self.index_register + 1) as usize, tens).expect("Failed to store tens digit in memory");
+        ram.set((self.index_register + 2) as usize, ones).expect("Failed to store ones digit in memory");
+
+        Ok(())
+    }
+
+    pub fn store_registers(&mut self, register: usize, ram: &mut Ram) -> Result<(), CpuError> {
+        debug!("Storing registers V0 to {} at index register address", register);
+        for i in 0..=register {
+            let value = self.get_register(i)?;
+            match ram.set((self.index_register + i as u16) as usize, value) {
+                Ok(_) => (),
+                Err(e) => return Err(CpuError::MemoryError(e)), // Handle memory error
+            }
+        }
+        Ok(())
+    }
+
+    pub fn load_registers(&mut self, register: usize, ram: &mut Ram) -> Result<(), CpuError> {
+        debug!("Loading registers V0 to {} from index register address", register);
+        for i in 0..=register {
+            match ram.get((self.index_register + i as u16) as usize) {
+                Ok(val) => self.set_register(i, val)?,
+                Err(e) => return Err(CpuError::MemoryError(e)), // Handle memory error
+            }
+        }
 
         Ok(())
     }

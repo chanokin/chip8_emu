@@ -64,6 +64,7 @@ impl App {
             self.gui.update_with_buffer(&buffer).expect("Failed to update GUI buffer");
 
             loop_index += 1;
+
         }
 
         Ok(())
