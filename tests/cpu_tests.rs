@@ -15,7 +15,7 @@ mod tests {
         let cpu = Cpu::new();
         // Check if all registers are initialized to 0
         for i in 0..16 {
-            assert_eq!(cpu.get_register(i).unwrap(), 0, "Register {} should be initialized to 0", i);
+            assert_eq!(cpu.get_register_value(i).unwrap(), 0, "Register {} should be initialized to 0", i);
         }
         // Check if program counter is initialized to 0x200
         assert_eq!(cpu.get_program_counter(), PROGRAM_COUNTER_START, "Program counter should be initialized to 0x200");
@@ -38,7 +38,7 @@ mod tests {
 
         // Check if registers are reset to 0
         for i in 0..16 {
-            assert_eq!(cpu.get_register(i).unwrap(), 0, "Register {} should be reset to 0", i);
+            assert_eq!(cpu.get_register_value(i).unwrap(), 0, "Register {} should be reset to 0", i);
         }
 
         // Check if program counter is reset
@@ -58,18 +58,18 @@ mod tests {
         let value = 42;
         cpu.set_register(register_index, value).expect("should be able to set register");
         // Check if the register value is set correctly
-        assert_eq!(cpu.get_register(register_index).unwrap(), value, "Register {} should be set to {}", register_index, value);
+        assert_eq!(cpu.get_register_value(register_index).unwrap(), value, "Register {} should be set to {}", register_index, value);
     }
 
     #[test]
-    fn test_cpu_get_register() {
+    fn test_cpu_get_register_value() {
         let mut cpu = Cpu::new();
         // Set a register to a value
         let register_index = 1;
         let value = 99;
         cpu.set_register(register_index, value).expect("should be able to set register");
         // Get the register value
-        let retrieved_value = cpu.get_register(register_index).expect("should be able to get register");
+        let retrieved_value = cpu.get_register_value(register_index).expect("should be able to get register");
         // Check if the retrieved value matches the set value
         assert_eq!(retrieved_value, value, "Retrieved value for register {} should be {}", register_index, value);
     }
@@ -79,7 +79,7 @@ mod tests {
         let cpu = Cpu::new();
         // Attempt to get a register that is out of bounds
         let invalid_index = 16; // Register index out of bounds (Chip-8 has 16 registers)
-        let result = cpu.get_register(invalid_index);
+        let result = cpu.get_register_value(invalid_index);
         // Check if the error is returned correctly
         assert!(result.is_err(), "Getting register {} should return an error", invalid_index);
     }

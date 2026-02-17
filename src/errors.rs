@@ -43,7 +43,7 @@ impl Display for DisplayError {
 
 #[derive(Debug)]
 pub enum CpuError {
-    InvalidOpcode(u8),
+    InvalidOpcode(&'static str, u8),
     RegisterOutOfBounds(usize),
     ClearDisplay,
     GetRegisterError(usize),
@@ -59,6 +59,7 @@ pub enum CpuError {
     DelayTimerUnderflow,
     SoundTimerUnderflow,
     ProgramCounterOverflow,
+    ProgramCounterUnderflow,
     InvalidProgramCounter(u16),
     InvalidRegisterOperation(u8), // New error for invalid register operations
 }
@@ -66,7 +67,7 @@ pub enum CpuError {
 impl Display for CpuError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CpuError::InvalidOpcode(opcode) => write!(f, "Invalid opcode: {:#04x}", opcode),
+            CpuError::InvalidOpcode(stage, opcode) => write!(f, "Invalid opcode at stage {}: {:#04x}", stage, opcode),
             CpuError::RegisterOutOfBounds(index) => write!(f, "Register index out of bounds: {}", index),
             CpuError::ClearDisplay => write!(f, "Failed to clear display"),
             CpuError::GetRegisterError(index) => write!(f, "Failed to get register at index: {}", index),
@@ -76,7 +77,7 @@ impl Display for CpuError {
             CpuError::StackPopError(error) => write!(f, "Stack pop error: {:?}", error),
             CpuError::StackError(error) => write!(f, "Stack error: {:?}", error),
             CpuError::StackNotInitialized => write!(f, "Stack is not initialized"),
-            CpuError::DisplayError(error) => write!(f, "Display error: {}", error),
+            CpuError::DisplayError(error) => write!(f, "Display error: {:?}", error),
             CpuError::MemoryError(error) => write!(f, "Memory error: {:?}", error),
             CpuError::IndexRegister(address) => {
                 write!(f, "Index register error with address: {:#04x}", address)
@@ -84,6 +85,7 @@ impl Display for CpuError {
             CpuError::DelayTimerUnderflow => write!(f, "Delay timer underflow"),
             CpuError::SoundTimerUnderflow => write!(f, "Sound timer underflow"),
             CpuError::ProgramCounterOverflow => write!(f, "Program counter overflow"),
+            CpuError::ProgramCounterUnderflow => write!(f, "Program counter underflow"),
             CpuError::InvalidProgramCounter(address) => {
                 write!(f, "Invalid program counter value: {:#04x}", address)
             },
@@ -107,13 +109,26 @@ pub enum MachineError {
 impl Display for MachineError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            MachineError::CpuError(e) => write!(f, "CPU error: {}", e),
-            MachineError::MemoryError(e) => write!(f, "Memory error: {:?}", e),
-            MachineError::StackError(e) => write!(f, "Stack error: {:?}", e),
-            MachineError::DisplayError(e) => write!(f, "Display error: {}", e),
+            MachineError::CpuError(error) => write!(f, "CPU error: {:?}", error),
+            MachineError::MemoryError(error) => write!(f, "Memory error: {:?}", error),
+            MachineError::StackError(error) => write!(f, "Stack error: {:?}", error),
+            MachineError::DisplayError(error) => write!(f, "Display error: {:?}", error),
             MachineError::ProgramTooLarge(actual, max) => {
                 write!(f, "Program size {} exceeds maximum allowed size {}", actual, max)
             },
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum BuzzerError {
+    TurnOnError
+}
+
+impl Display for BuzzerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BuzzerError::TurnOnError => write!(f, "Turning the buzzer on error"),
         }
     }
 }

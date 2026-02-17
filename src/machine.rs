@@ -2,29 +2,35 @@ use crate::ram::Ram;
 use crate::cpu::Cpu;
 use crate::gpu::Gpu;
 use crate::stack::Stack;
+use crate::buzzer::Buzzer;
 use crate::constants::{FONT_START_ADDRESS, MAX_LOOP_COUNT, MAX_PROGRAM_SIZE, PROGRAM_COUNTER_START};
 use crate::errors::MachineError;
 use crate::font::FONT;
+use log::{debug, };
 
 pub struct Machine {
     pub ram: Ram,
     pub stack: Stack,
     pub gpu: Gpu,
     pub cpu: Cpu,
+    pub buzzer: Buzzer,
     pub kill_switch: bool,
 }
 
 impl Machine {
-    pub fn new() -> Self {
+    pub fn new(buzzer_volume: f32, buzzer_tone_frequency: f32) -> Self {
         let ram = Ram::new();
         let stack = Stack::new();
         let gpu = Gpu::new();
         let cpu = Cpu::new();
+        let buzzer = Buzzer::new(buzzer_volume, buzzer_tone_frequency);
+
         let mut machine = Machine {
             ram,
             stack,
             gpu,
             cpu,
+            buzzer,
             kill_switch: false,
         };
 
@@ -74,7 +80,34 @@ impl Machine {
     }
 
     pub fn step(&mut self, key_state: [bool; 16]) -> Result<(), MachineError> {
-        match self.cpu.update(&mut self.gpu, &mut self.ram, key_state) {
+        match {
+            let cpu = &mut self.cpu;
+            let gpu: &mut Gpu = &mut self.gpu;
+            let ram: &mut Ram = &mut self.ram;
+            // Fetch the next instruction from memory
+            let instruction = match cpu.fetch(ram) {
+                Ok(instr) => instr,
+                Err(e) => return Err(MachineError::CpuError(e)),
+            };
+
+            // Decode the instruction
+            let (opcode, args) = cpu.decode(instruction);
+            debug!("-> Executing instruction at PC: 0x{:04X} -> Opcode: 0x{:02X}, Args: 0x{:04X}",
+                     cpu.get_program_counter() - 2, opcode, args);
+
+            // Execute the instruction
+            match cpu.execute(opcode, args, gpu, ram, key_state) {
+                Ok(_) => {},
+                Err(e) => return Err(MachineError::CpuError(e)),
+            }
+
+            if cpu.get_sound_timer() > 0 {
+                debug!("Sound timer: {}", cpu.get_sound_timer());
+            }
+
+            // Increment the program counter
+            Ok(())
+        } {
             Ok(_) => Ok(()),
             Err(e) => {
                 Err(MachineError::CpuError(e))

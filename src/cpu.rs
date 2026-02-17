@@ -1,7 +1,8 @@
 use crate::constants::{
     CodeCategories, DelayTimerType, FunctionCodes, IndexRegisterType, OpCodes, ProgramCounterType,
     RegisterOperations, SoundTimerType, VariableRegisterType, MiscellaneousOperations,
-    DISPLAY_START_ADDRESS, NUMBER_OF_KEYS, PROGRAM_COUNTER_START
+    DISPLAY_START_ADDRESS, NUMBER_OF_KEYS, PROGRAM_COUNTER_START,
+    MAP_KEY_STATE_TO_CHIP8
 };
 use crate::errors::{
     CpuError,
@@ -10,29 +11,38 @@ use crate::registers::Registers;
 use crate::gpu::Gpu;
 use crate::ram::Ram;
 use crate::stack::Stack;
-pub struct Decoder;
 use log::{debug, };
+
+
+/// Decoding unit for instructions.
+/// It extracts opcodes and arguments from 16-bit data/instruction and categorizes for execution.
+pub struct Decoder;
+
 
 impl Decoder {
     pub fn new() -> Self {
-        Decoder
+        Decoder // this can probably be done with default
     }
 
+    /// Extracts the opcode (upper 4 bits) from the instruction
     pub fn opcode(&self, instruction: u16) -> u8 {
         // Extract the opcode from the instruction
         (instruction >> 12) as u8
     }
 
+    /// Extracts the arguments from the instruction based on the opcode category (mask lsb 12 bits)
     pub fn args(&self, instruction: u16) -> u16 {
         // Extract the arguments from the instruction
         self.nnn(instruction)
     }
 
+    /// Extracts the 12-bit number (NNN) from the instruction
     pub fn nnn(&self, instruction: u16) -> u16 {
         // Extract the 12-bit number from the instruction
         instruction & 0x0FFF
     }
 
+    /// Extracts the register id and 8-bit number (XNN) from the instruction
     pub fn xnn(&self, instruction: u16) -> (u8, u8) {
         // Extract the 4-bit var register index/name and the 8-bit number from the instruction
         let first_register = ((instruction >> 8) & 0x0F) as u8;
@@ -41,6 +51,7 @@ impl Decoder {
         (first_register, val)
     }
 
+    /// Extracts two registers ids and the 4-bit number (XYN) from the instruction
     pub fn xyn(&self, instruction: u16) -> (u8, u8, u8) {
         // Extract two 4-bit var register indices/names and a 4-bit number from the instruction
         let first_registesr = ((instruction >> 8) & 0x0F) as u8;
@@ -49,22 +60,26 @@ impl Decoder {
         (first_registesr, second_register, number)
     }
 
+    /// Figure out which category the opcode belongs to, this allows to determine
+    /// how to "understand" the arguments and extract them.
     pub fn extraction_category(&self, opcode: u8) -> Result<CodeCategories, CpuError> {
         // Determine the category of the instruction
         match opcode {
             // 1 12-bit number (one output value)
             0x0 | 0x1 | 0x2 | 0xA | 0xB => Ok(CodeCategories::NNN),
             // 1 var register and 1 8-bit number (two output values)
-            0x3 | 0x4 | 0x6 | 0x7 | 0xC => Ok(CodeCategories::XNN),
+            0x3 | 0x4 | 0x6 | 0x7 | 0xC | 0xF => Ok(CodeCategories::XNN),
             // 2 var register and 1 4-bit number (three output values)
-            0x5 | 0x8 | 0x9 | 0xD | 0xE | 0xF => Ok(CodeCategories::XYN),
-            _ => Err(CpuError::InvalidOpcode(opcode)),
+            0x5 | 0x8 | 0x9 | 0xD | 0xE => Ok(CodeCategories::XYN),
+            _ => Err(CpuError::InvalidOpcode("extraction_category",opcode)),
         }
     }
 }
 
 
-
+/// The central processing unit (CPU) of the CHIP-8 emulator.
+/// It is responsible for fetching, decoding, and executing instructions.
+/// TODO: I'm not sure all components belong here.
 pub struct Cpu {
     decoder: Decoder,
     registers: Registers,
@@ -74,6 +89,7 @@ pub struct Cpu {
     delay_timer: DelayTimerType,
     sound_timer: SoundTimerType
 }
+
 
 impl Cpu {
     pub fn new() -> Self {
@@ -92,6 +108,11 @@ impl Cpu {
         cpu
     }
 
+
+    /// Fetches the next instruction from ram at the current program counter.
+    /// Because the memrory is byte-addressable and instructiosn are 16-bit (2 bytes),
+    /// we need to fetch two bytes and combine them to form the full instruction.
+    /// After fetching the instruction, we increment the program counter (2 bytes as well).
     pub fn fetch(&mut self, ram: &Ram) -> Result<u16, CpuError> {
         // Fetch the next instruction from memory
         let instruction_msb = match ram.get(self.program_counter as usize) {
@@ -111,6 +132,8 @@ impl Cpu {
         Ok(instruction)
     }
 
+    /// Sets the CPU state to the initial values, ready to execute a new program.
+    /// Clears stack and registers and sets program counter to the start address.
     pub fn reset(&mut self) {
         // Reset CPU state
         self.program_counter = PROGRAM_COUNTER_START; // Reset program counter to start
@@ -121,6 +144,7 @@ impl Cpu {
         self.sound_timer = 0; // Reset sound timer to 0
     }
 
+    /// Decodes the instruction (16-bit) into opcode (4 bits) and arguments (12 bits).
     pub fn decode(&self, instruction: u16) -> (u8, u16) {
         let opcode = self.decoder.opcode(instruction);
         let args = self.decoder.args(instruction);
@@ -128,35 +152,53 @@ impl Cpu {
         (opcode, args)
     }
 
+    /// Executes the instruction based on the opcode (4 bits) and arguments (12 bits).
+    /// The execution usually requires ram. Some
     pub fn execute(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram, key_state: [bool; 16]) -> Result<(), CpuError> {
         let category = match self.decoder.extraction_category(opcode) {
             Ok(cat) => cat,
             Err(e) => return Err(e),
         };
 
-        println!("\tExecuting opcode: 0x{:02X} in category: {:?}", opcode, category);
+        debug!("\tExecuting opcode: 0x{:02X} in category: {:?}", opcode, category);
 
-        // just trying to distribute according to how we split the instructions
+        // just distribute according to how we split the instructions
         match category {
+            // all 12 bits are a single number
             CodeCategories::NNN => self.nnn(opcode, args, gpu, ram, key_state),
+            // first arg is a register number, second arg is an 8-bit number
             CodeCategories::XNN => self.xnn(opcode, args, gpu, ram, key_state),
+            // first two args are register numbers, third arg is a number - all are 4-bit values
             _ => self.xyn(opcode, args, gpu, ram, key_state),
         }
     }
 
 
+    /// One CPU cycle: fetch, decode, and execute instruction.
     pub fn update(&mut self, gpu: &mut Gpu, ram: &mut Ram, key_state: [bool; 16]) -> Result<(), CpuError> {
         // Fetch the next instruction from memory
         let instruction = self.fetch(ram)?;
 
         // Decode the instruction
         let (opcode, args) = self.decode(instruction);
-        println!("-> Executing instruction at PC: 0x{:04X} -> Opcode: 0x{:02X}, Args: 0x{:04X}",
+
+        debug!("-> Executing instruction at PC: 0x{:04X} -> Opcode: 0x{:02X}, Args: 0x{:04X}",
                  self.program_counter - 2, opcode, args);
+
         // Execute the instruction
         self.execute(opcode, args, gpu, ram, key_state)?;
 
         // Increment the program counter
+        self.increment_program_counter()?;
+
+        if self.delay_timer > 0 {
+            self.decrease_delay_timer()?;
+        }
+
+        if self.sound_timer > 0 {
+            self.decrease_sound_timer()?;
+        }
+
         Ok(())
     }
 
@@ -185,9 +227,14 @@ impl Cpu {
         self.program_counter
     }
 
+
     pub fn set_delay_timer(&mut self, value: DelayTimerType) {
         // Set the delay timer to a specific value
         self.delay_timer = value;
+    }
+
+    pub fn get_delay_timer(&self) -> DelayTimerType {
+        self.delay_timer
     }
 
     pub fn decrease_delay_timer(&mut self) -> Result<(), CpuError> {
@@ -200,13 +247,13 @@ impl Cpu {
         }
     }
 
-    pub fn get_delay_timer(&self) -> DelayTimerType {
-        self.delay_timer
-    }
-
     pub fn set_sound_timer(&mut self, value: SoundTimerType) {
         // Set the sound timer to a specific value
         self.sound_timer = value;
+    }
+
+    pub fn get_sound_timer(&self) -> SoundTimerType {
+        self.sound_timer
     }
 
     pub fn decrease_sound_timer(&mut self) -> Result<(), CpuError> {
@@ -219,7 +266,7 @@ impl Cpu {
         }
     }
 
-    pub fn get_register(&self, index: usize) -> Result<VariableRegisterType, CpuError> {
+    pub fn get_register_value(&self, index: usize) -> Result<VariableRegisterType, CpuError> {
         match self.registers.get(index) {
             Ok(value) => Ok(value),
             Err(_) => Err(CpuError::GetRegisterError(index)), // Handle out of bounds error
@@ -279,20 +326,20 @@ impl Cpu {
         }
     }
 
-    // Dispatch functions based on instruction categories with a 12-bit number (NNN)
+    /// Dispatch functions based on instruction categories with a 12-bit number (NNN)
     pub fn nnn(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram, _key_state: [bool; 16]) -> Result<(), CpuError> {
-        println!("\tExecuting opcode: 0x{:02X} in category: NNN with args: 0x{:04X}", opcode, args);
+        debug!("\tExecuting opcode: 0x{:02X} in category: NNN with args: 0x{:04X}", opcode, args);
         match OpCodes(opcode)  {
             OpCodes::Zero => self.zero(args, gpu, ram), // 0x0NNN
             OpCodes::Jump => self.jump_to(args), // 0x1NNN
             OpCodes::CallSubroutine => self.call_routine_at(args), // 0x2NNN
             OpCodes::SetIndex => self.set_index_register(args), // 0xANNN
-            _ => Err(CpuError::InvalidOpcode(opcode)),
+            _ => Err(CpuError::InvalidOpcode("NNN dispatch", opcode)),
         }
 
     }
 
-    // Dispatch functions with an 8-bit number (NN) and a register (X)
+    /// Dispatch functions with an 8-bit number (NN) and a register (X)
     pub fn xnn(&mut self, opcode: u8, args: u16, _gpu: &mut Gpu, ram: &mut Ram, key_state: [bool; 16]) -> Result<(), CpuError> {
         // Extract the register and number from the arguments
         let (register, number) = self.decoder.xnn(args);
@@ -306,11 +353,11 @@ impl Cpu {
             OpCodes::Random => self.random(register as usize, number), // 0xCXNN
             OpCodes::KeyOperations => self.key_operations(register as usize, number, key_state), // 0xEXNN
             OpCodes::Miscellaneous => self.miscellaneous(register as usize, number, ram, key_state), // 0xFXNN
-            _ => Err(CpuError::InvalidOpcode(opcode)),
+            _ => Err(CpuError::InvalidOpcode("XNN dispatch", opcode)),
         }
     }
 
-    // Dispatch functions with two registers (X, Y) and a number (N)
+    /// Dispatch functions with two registers (X, Y) and a number (N)
     pub fn xyn(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram, _key_state: [bool; 16]) -> Result<(), CpuError> {
         // Extract the two registers and the number from the arguments
         let (register_0, register_1, number) = self.decoder.xyn(args);
@@ -325,7 +372,7 @@ impl Cpu {
             OpCodes::SkipIfUnequalRegReg => self.skip_if_unequal_registers(register_0 as usize, register_1 as usize), // 0x9XY0
             // 0xDXYN
             OpCodes::Draw => self.draw_sprite_at(register_0, register_1, number, gpu, ram), // 0xDXYN
-            _ => Err(CpuError::InvalidOpcode(opcode)),
+            _ => Err(CpuError::InvalidOpcode("XYN dispatch", opcode)),
         }
     }
 
@@ -487,8 +534,8 @@ impl Cpu {
     pub fn reg_ops(&mut self, register_0: usize, register_1: usize, number: u8, _gpu: &mut Gpu, _ram: &mut Ram) -> Result<(), CpuError> {
         debug!("Performing register operation with registers {} and {}, number {}", register_0, register_1, number);
         // Perform operations based on the opcode
-        let value_0 = self.get_register(register_0)?;
-        let value_1 = self.get_register(register_1)?;
+        let value_0 = self.get_register_value(register_0)?;
+        let value_1 = self.get_register_value(register_1)?;
 
         // here the number is used to determine the operation
         match RegisterOperations(number) {
@@ -583,7 +630,7 @@ impl Cpu {
 
     pub fn jump_addres_plus_v0(&mut self, address: u16) -> Result<(), CpuError> {
         // Jump to the address specified by the offset from the index register
-        let address = self.get_register(0)? as u16 + (address & 0x0FFF);
+        let address = self.get_register_value(0)? as u16 + (address & 0x0FFF);
 
         debug!("Jumping to address with offset: 0x{:04X}", address);
 
@@ -610,8 +657,8 @@ impl Cpu {
         // Draw a sprite at the specified coordinates (x, y) with height n
         // This would typically involve accessing the display memory and drawing the sprite
         let sprite_address = self.index_register;
-        let x = self.get_register(x as usize)?;
-        let y = self.get_register(y as usize)?;
+        let x = self.get_register_value(x as usize)?;
+        let y = self.get_register_value(y as usize)?;
 
         debug!(
             "Drawing sprite in {:04X} at coordinates ({}, {}) with height {}",
@@ -631,12 +678,12 @@ impl Cpu {
 
     /* 0xE??? ---------------------------------------------------------------------- */
     pub fn key_operations(&mut self, register: usize, func_code: u8, key_state: [bool; 16]) -> Result<(), CpuError> {
-        let value_0 = self.get_register(register)?;
+        let value_0 = self.get_register_value(register)?;
         // Handle key operations based on the opcode
         match FunctionCodes(func_code) {
             FunctionCodes::SkipIfKeyPressed => self.skip_if_key_pressed(value_0, key_state), // 0xEX9E
             FunctionCodes::SkipIfKeyNotPressed => self.skip_if_key_not_pressed(value_0, key_state), // 0xEXA1
-            _ => Err(CpuError::InvalidOpcode(func_code)), // Handle invalid opcode
+            _ => Err(CpuError::InvalidOpcode("key_operations [0xEXNN]", func_code)), // Handle invalid opcode
         }
     }
 
@@ -672,7 +719,10 @@ impl Cpu {
             MiscellaneousOperations::SetSoundTimer => self.set_sound_to_reg(register), // 0xFX18
             MiscellaneousOperations::AddToIndexRegister => self.add_index_to_reg(register), // 0xFX1E
             MiscellaneousOperations::SetSpriteAddress => self.set_index_reg_to_char(register), // 0xFX29
-            _ => Err(CpuError::InvalidOpcode(func_code)), // Handle invalid opcode
+            MiscellaneousOperations::StoreBCD => self.store_bcd(register, _ram), // 0xFX33
+            MiscellaneousOperations::StoreRegisters => self.store_registers(register, _ram), // 0xFX55
+            MiscellaneousOperations::LoadRegisters => self.load_registers(register, _ram), // 0xFX65
+            _ => Err(CpuError::InvalidOpcode("miscellaneous [0xFXNN]", func_code)), // Handle invalid opcode
         }
     }
 
@@ -682,45 +732,115 @@ impl Cpu {
         self.set_register(register, delay_value)
     }
 
-    pub fn set_reg_to_key(&mut self, register: usize, _key_state: [bool; 16]) -> Result<(), CpuError> {
+    /// FX0A - Wait for a key press, store the value of the key in Vx
+    pub fn set_reg_to_key(&mut self, _register: usize, _key_state: [bool; 16]) -> Result<(), CpuError> {
         // block until a key is pressed and set the register to the key value
-        // todo:
-        debug!("Setting register {} to key value: {}", register, 0);
-        self.set_register(register,0)
+        // todo!("not entirely sure I got this right");
+        debug!("Setting register {} to key value: {}", _register, 0);
+        for (i, &pressed) in _key_state.iter().enumerate() {
+            if pressed {
+                debug!("Key {} is pressed, setting register {} to {}", i, _register, i);
+                return self.set_register(_register, i as u8);
+            }
+        }
+
+        debug!("No key is pressed, setting register {} to 0", _register);
+
+        // hack to not continue with the next instruction -
+        // by decrementing here the fetch-decode-execute-increment cycle
+        // will result in fetching the same instruction again
+        return self.decrease_program_counter();
+
+    }
+
+    pub fn decrease_program_counter(&mut self) -> Result<(), CpuError> {
+        // Decrement the program counter by 2 to repeat the instruction
+        if self.program_counter >= PROGRAM_COUNTER_START + 2 {
+            self.program_counter -= 2;
+            Ok(())
+        } else {
+            Err(CpuError::ProgramCounterUnderflow) // Handle program counter underflow
+        }
     }
 
     pub fn set_delay_to_reg(&mut self, register: usize) -> Result<(), CpuError> {
-        let value = self.get_register(register)?;
+        let value = self.get_register_value(register)?;
         debug!("Setting delay timer to register {} value: {}", register, value);
         self.set_delay_timer(value as DelayTimerType);
         Ok(())
     }
 
     pub fn set_sound_to_reg(&mut self, register: usize) -> Result<(), CpuError> {
-        let value = self.get_register(register)?;
+        let value = self.get_register_value(register)?;
         debug!("Setting sound timer to register {} value: {}", register, value);
         self.set_sound_timer(value as SoundTimerType);
         Ok(())
     }
 
     pub fn add_index_to_reg(&mut self, register: usize) -> Result<(), CpuError> {
-        let value = self.get_register(register)?;
+        let value = self.get_register_value(register)?;
         debug!("Adding index register value {} to register {}", self.index_register, register);
         let new_value = self.index_register.wrapping_add(value as IndexRegisterType); // Ensure it's a 12-bit value
         self.set_index_register(new_value)?;
         Ok(())
     }
 
-    pub fn set_index_reg_to_char(&mut self, _register: usize) -> Result<(), CpuError> {
-        // Set the index register to the address of the character corresponding to the value in the specified register
-        // todo!("Implement set_index_reg_to_char");
-        // let value = self.get_register(register)?;
-        // debug!("Setting index register to character address for register {} value: {}", register, value);
-        // if value > 0xF {
-        //     return Err(CpuError::InvalidCharacterRegister(value)); // Handle invalid character register
-        // }
+    /// FX29 - Set the index register to the address of the character corresponding to the value in the specified register
+    pub fn set_index_reg_to_char(&mut self, register: usize) -> Result<(), CpuError> {
+        // todo!("not entirely sure I got this right");
+        let value = self.get_register_value(register)?;
 
-        // self.index_register = (value as IndexRegisterType) * 5; // Each character is 5 bytes
+        debug!("Setting index register to character address for register {} value: {}", register, value);
+
+        self.index_register = (value & 0xF) as IndexRegisterType;
+
+        Ok(())
+    }
+
+    pub fn store_bcd(&mut self, register: usize, ram: &mut Ram) -> Result<(), CpuError> {
+        let value = self.get_register_value(register)?;
+        debug!("Storing BCD of register {} value: {} at index register address", register, value);
+        let hundreds = value / 100;
+        let tens = (value % 100) / 10;
+        let ones = value % 10;
+
+        match ram.set(self.index_register as usize, hundreds) {
+            Ok(_) => (),
+            Err(e) => return Err(CpuError::MemoryError(e)), // Handle memory error
+        };
+
+        match ram.set((self.index_register + 1) as usize, tens) {
+            Ok(_) => (),
+            Err(e) => return Err(CpuError::MemoryError(e)), // Handle memory error
+        };
+        match ram.set((self.index_register + 2) as usize, ones) {
+            Ok(_) => (),
+            Err(e) => return Err(CpuError::MemoryError(e)), // Handle memory error
+        };
+
+        Ok(())
+    }
+
+    pub fn store_registers(&mut self, register: usize, ram: &mut Ram) -> Result<(), CpuError> {
+        debug!("Storing registers V0 to {} at index register address", register);
+        for i in 0..=register {
+            let value = self.get_register_value(i)?;
+            match ram.set((self.index_register + i as u16) as usize, value) {
+                Ok(_) => (),
+                Err(e) => return Err(CpuError::MemoryError(e)), // Handle memory error
+            }
+        }
+        Ok(())
+    }
+
+    pub fn load_registers(&mut self, register: usize, ram: &mut Ram) -> Result<(), CpuError> {
+        debug!("Loading registers V0 to {} from index register address", register);
+        for i in 0..=register {
+            match ram.get((self.index_register + i as u16) as usize) {
+                Ok(val) => self.set_register(i, val)?,
+                Err(e) => return Err(CpuError::MemoryError(e)), // Handle memory error
+            }
+        }
 
         Ok(())
     }

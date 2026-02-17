@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+use lazy_static::lazy_static;
 
 pub static DISPLAY_WIDTH: usize = 64;
 pub static DISPLAY_HEIGHT: usize = 32;
@@ -121,7 +123,30 @@ impl MiscellaneousOperations {
 }
 
 
-
-
-
 pub static MAX_LOOP_COUNT: i64 = 1000000; // Maximum loop count to prevent infinite loops
+
+
+lazy_static! {
+    pub static ref MAP_KEY_STATE_TO_CHIP8: HashMap<u8, char> = HashMap::from([
+        // keys 1, 2, 3, 4
+        (0x0u8, 'C'),
+        (0x1u8, 'D'),
+        (0x2u8, 'E'),
+        (0x3u8, 'F'),
+        // keys Q, W, E, R
+        (0x4u8, '8'),
+        (0x5u8, '9'),
+        (0x6u8, 'A'),
+        (0x7u8, 'B'),
+        // keys A, S, D, F
+        (0x8u8, '4'),
+        (0x9u8, '5'),
+        (0xAu8, '6'),
+        (0xBu8, '7'),
+        // keys Z, X, C, V
+        (0x8u8, '0'),
+        (0x9u8, '1'),
+        (0xAu8, '2'),
+        (0xBu8, '3')
+    ]);
+}

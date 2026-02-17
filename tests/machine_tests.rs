@@ -13,7 +13,7 @@ mod tests {
 
     #[test]
     fn test_machine_initialization() {
-        let machine = Machine::new();
+        let machine = Machine::new(0f32, 0f32);
         // Check if RAM is initialized correctly
         assert_eq!(machine.ram.len(), 4096, "RAM should be initialized to 4096 bytes");
         // Check if stack is initialized correctly
@@ -24,7 +24,7 @@ mod tests {
 
         // Check if CPU is initialized correctly
         for i in 0..16 {
-            assert_eq!(machine.cpu.get_register(i).unwrap(), 0, "Register {} should be initialized to 0", i);
+            assert_eq!(machine.cpu.get_register_value(i).unwrap(), 0, "Register {} should be initialized to 0", i);
         }
         assert_eq!(machine.cpu.get_program_counter(), PROGRAM_COUNTER_START, "Program counter should be initialized to 0x200");
         assert_eq!(machine.cpu.get_index_register(), 0);
@@ -33,7 +33,7 @@ mod tests {
 
     #[test]
     fn test_machine_reset() {
-        let mut machine = Machine::new();
+        let mut machine = Machine::new(0f32, 0f32);
         // Set some values in RAM, stack, and CPU
         machine.ram.set_range(PROGRAM_COUNTER_START as u16, 10, &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).expect("should be able to set RAM");
         machine.stack.push(0x1234).expect("should be able to push to stack");
@@ -49,7 +49,7 @@ mod tests {
         assert!(machine.stack.is_empty(), "Stack should be empty after reset");
         // Check if registers are reset to 0
         for i in 0..16 {
-            assert_eq!(machine.cpu.get_register(i).unwrap(), 0, "Register {} should be reset to 0", i);
+            assert_eq!(machine.cpu.get_register_value(i).unwrap(), 0, "Register {} should be reset to 0", i);
         }
         // Check if program counter is reset
         assert_eq!(machine.cpu.get_program_counter(), PROGRAM_COUNTER_START, "Program counter should be reset to 0x200");
@@ -58,7 +58,7 @@ mod tests {
 
     #[test]
     fn test_machine_load_program() {
-        let mut machine = Machine::new();
+        let mut machine = Machine::new(0f32, 0f32);
         let program = [0x00, 0xE0, 0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0];
         // Load the program into RAM
         match machine.load_program(&program) {
@@ -81,7 +81,7 @@ mod tests {
         // set logger to debug level
         log::set_max_level(log::LevelFilter::Trace);
         let rom = Reader::read_rom("roms/ibm_logo.ch8").expect("should be able to read rom");
-        let mut machine = Machine::new();
+        let mut machine = Machine::new(0f32, 0f32);
 
         match machine.load_program(&rom) {
             Ok(_) => {},
