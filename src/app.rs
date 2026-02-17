@@ -11,7 +11,7 @@ pub struct App {
 impl App {
     pub fn new(scale: usize, fps: usize) -> Self {
         App {
-            machine: Machine::new(),
+            machine: Machine::new(0f32, 0f32),
             gui: GUI::new(scale, fps),
         }
     }
