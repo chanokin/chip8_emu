@@ -68,9 +68,9 @@ impl Decoder {
             // 1 12-bit number (one output value)
             0x0 | 0x1 | 0x2 | 0xA | 0xB => Ok(CodeCategories::NNN),
             // 1 var register and 1 8-bit number (two output values)
-            0x3 | 0x4 | 0x6 | 0x7 | 0xC | 0xF => Ok(CodeCategories::XNN),
+            0x3 | 0x4 | 0x6 | 0x7 | 0xC | 0xF | 0xE => Ok(CodeCategories::XNN),
             // 2 var register and 1 4-bit number (three output values)
-            0x5 | 0x8 | 0x9 | 0xD | 0xE => Ok(CodeCategories::XYN),
+            0x5 | 0x8 | 0x9 | 0xD => Ok(CodeCategories::XYN),
             _ => Err(CpuError::InvalidOpcode("extraction_category",opcode)),
         }
     }
@@ -127,6 +127,8 @@ impl Cpu {
 
         let instruction = ((instruction_msb as u16) << 8) | (instruction_lsb as u16);
 
+        // as soon as we get the instruction we update the program counter
+        // this way we won't forget
         self.increment_program_counter()?;
 
         Ok(instruction)
@@ -182,14 +184,11 @@ impl Cpu {
         // Decode the instruction
         let (opcode, args) = self.decode(instruction);
 
-        debug!("-> Executing instruction at PC: 0x{:04X} -> Opcode: 0x{:02X}, Args: 0x{:04X}",
-                 self.program_counter - 2, opcode, args);
+        println!("-> Executing instruction at PC: {} -> Opcode: 0x{:02X}, Args: 0x{:04X}",
+                 self.program_counter, opcode, args);
 
         // Execute the instruction
         self.execute(opcode, args, gpu, ram, key_state)?;
-
-        // Increment the program counter
-        self.increment_program_counter()?;
 
         if self.delay_timer > 0 {
             self.decrease_delay_timer()?;
@@ -359,6 +358,7 @@ impl Cpu {
 
     /// Dispatch functions with two registers (X, Y) and a number (N)
     pub fn xyn(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram, _key_state: [bool; 16]) -> Result<(), CpuError> {
+        debug!("Executing opcode: 0x{:01X} in category: XYN with args: 0x{:03X}", opcode, args);
         // Extract the two registers and the number from the arguments
         let (register_0, register_1, number) = self.decoder.xyn(args);
 

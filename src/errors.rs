@@ -67,7 +67,7 @@ pub enum CpuError {
 impl Display for CpuError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CpuError::InvalidOpcode(stage, opcode) => write!(f, "Invalid opcode at stage {}: {:#04x}", stage, opcode),
+            CpuError::InvalidOpcode(stage, opcode) => write!(f, "Invalid opcode at stage {}: 0x{:04X}", stage, opcode),
             CpuError::RegisterOutOfBounds(index) => write!(f, "Register index out of bounds: {}", index),
             CpuError::ClearDisplay => write!(f, "Failed to clear display"),
             CpuError::GetRegisterError(index) => write!(f, "Failed to get register at index: {}", index),

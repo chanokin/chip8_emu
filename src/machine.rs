@@ -80,39 +80,24 @@ impl Machine {
     }
 
     pub fn step(&mut self, key_state: [bool; 16]) -> Result<(), MachineError> {
-        match {
-            let cpu = &mut self.cpu;
+            let cpu: &mut Cpu = &mut self.cpu;
             let gpu: &mut Gpu = &mut self.gpu;
             let ram: &mut Ram = &mut self.ram;
-            // Fetch the next instruction from memory
-            let instruction = match cpu.fetch(ram) {
-                Ok(instr) => instr,
-                Err(e) => return Err(MachineError::CpuError(e)),
-            };
 
-            // Decode the instruction
-            let (opcode, args) = cpu.decode(instruction);
-            debug!("-> Executing instruction at PC: 0x{:04X} -> Opcode: 0x{:02X}, Args: 0x{:04X}",
-                     cpu.get_program_counter() - 2, opcode, args);
-
-            // Execute the instruction
-            match cpu.execute(opcode, args, gpu, ram, key_state) {
+            match cpu.update(gpu, ram, key_state) {
                 Ok(_) => {},
                 Err(e) => return Err(MachineError::CpuError(e)),
             }
 
             if cpu.get_sound_timer() > 0 {
                 debug!("Sound timer: {}", cpu.get_sound_timer());
+                self.buzzer.turn_on();
+
+            } else {
+                self.buzzer.turn_off();
             }
 
-            // Increment the program counter
             Ok(())
-        } {
-            Ok(_) => Ok(()),
-            Err(e) => {
-                Err(MachineError::CpuError(e))
-            }
-        }
 
     }
 
