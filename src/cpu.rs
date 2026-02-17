@@ -184,7 +184,7 @@ impl Cpu {
         // Decode the instruction
         let (opcode, args) = self.decode(instruction);
 
-        println!("-> Executing instruction at PC: {} -> Opcode: 0x{:02X}, Args: 0x{:04X}",
+        debug!("-> Executing instruction at PC: {} -> Opcode: 0x{:02X}, Args: 0x{:04X}",
                  self.program_counter, opcode, args);
 
         // Execute the instruction
@@ -310,6 +310,7 @@ impl Cpu {
     pub fn is_key_pressed(&self, key: u8, key_state: [bool; 16]) -> bool {
         // Check if a specific key is pressed
         if key < NUMBER_OF_KEYS as u8 {
+            debug!("Checking if key {} is pressed: {}", key, key_state[key as usize]);
             key_state[key as usize]
         } else {
             false // Invalid key index
@@ -319,6 +320,7 @@ impl Cpu {
     pub fn is_key_released(&self, key: u8, key_state: [bool; 16]) -> bool {
         // Check if a specific key is released
         if key < NUMBER_OF_KEYS as u8 {
+            debug!("Checking if key {} is released: {}", key, !key_state[key as usize]);
             key_state[key as usize] == false
         } else {
             false // Invalid key index
