@@ -1,4 +1,4 @@
-- [ ] Instructions
+- [x] Instructions
   - [x] 0x0
     - [x] 0x00E0 Clear screen
     - [x] 0x00EE Return from subroutine
@@ -51,18 +51,18 @@
   - [x] 0xD
     - [x] 0xDXYN Draw a sprite at coordinate [V(X), V(Y)] (values of Regs X, Y). The sprite has an 8 pixels width and an N pixels height.
 
-  - [ ] 0xE
-    - [ ] 0xEX9E Skip instruction if the key stored in Reg X is being pressed.
-    - [ ] 0xEXA1 Skip instruction if the key stored in Reg X is NOT being pressed.
+  - [x] 0xE
+    - [x] 0xEX9E Skip instruction if the key stored in Reg X is being pressed.
+    - [x] 0xEXA1 Skip instruction if the key stored in Reg X is NOT being pressed.
 
-  - [ ] 0xF
+  - [x] 0xF
     - [x] 0xFX07 Set the value of Reg X to the Delay timer value.
-    - [ ] 0xFX0A Set the value of Reg X to the value of the key pressed [blocking!].
+    - [x] 0xFX0A Set the value of Reg X to the value of the key pressed [blocking!].
     - [x] 0xFX15 Set Delay timer to the value of Reg X
     - [x] 0xFX18 Set Sound timer to the value of Reg X
     - [x] 0xFX1E Add the value of Reg X to the Index Reg. [VF not affected!]
-    - [ ] 0xFX29 Set the Index Reg to the location of the sprite for the character in Reg X
-    - [ ] 0xFX33 Store the BCD of the value in Reg X into the Index Reg I(+0,+1,+2) = BCD(VX|3,2,1)
-    - [ ] 0xFX55 Dump registers from 0 to X (inclusive) into the Index Reg I(+0,...,+X) = V(0,...,X)
-    - [ ] 0xFX65 Load the Index Reg into registers from 0 to X (inclusive)  V(0,...,X) = I(+0,...,+X)
+    - [x] 0xFX29 Set the Index Reg to the location of the sprite for the character in Reg X
+    - [x] 0xFX33 Store the BCD of the value in Reg X into the Index Reg I(+0,+1,+2) = BCD(VX|3,2,1)
+    - [x] 0xFX55 Dump registers from 0 to X (inclusive) into the Index Reg I(+0,...,+X) = V(0,...,X)
+    - [x] 0xFX65 Load the Index Reg into registers from 0 to X (inclusive)  V(0,...,X) = I(+0,...,+X)
 
