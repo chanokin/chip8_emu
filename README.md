@@ -2,8 +2,8 @@ Simple Chip8 emulator written in Rust, mainly to teach myself the language.
 
 It's quite barebone, it opens a simple window and render the frame buffer;
 you can then
-- open a ROM by pressing the _O_ key
-- reset (full clear) by pressing the _I_ key
+- open a ROM by pressing the `O` key
+- reset (full clear) by pressing the `I` key
 
 and the keyboard is mapped this way
 ```
