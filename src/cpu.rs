@@ -379,7 +379,7 @@ impl Cpu {
     }
 
     /* 0x0??? ---------------------------------------------------------------------- */
-
+    /// Dispatch 0x0NNN instructions
     pub fn zero(&mut self, args: u16, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         match FunctionCodes((args & 0x00FF) as u8) {
             FunctionCodes::ClearDisplay => self.clear_display(gpu, ram), // 0x00E0
@@ -389,7 +389,7 @@ impl Cpu {
     }
 
 
-    // 0x00E0
+    /// 0x00E0
     pub fn clear_display(&mut self, gpu: &mut Gpu, ram: &mut Ram) -> Result<(), CpuError> {
         debug!("Clearing display");
         match gpu.clear(ram) {
@@ -398,7 +398,7 @@ impl Cpu {
         }
     }
 
-    // 0x00EE
+    /// 0x00EE
     pub fn return_from_subroutine(&mut self) -> Result<(), CpuError> {
         debug!("Returning from subroutine");
         // Return from a subroutine by popping the address from the stack
@@ -415,7 +415,7 @@ impl Cpu {
 
 
     /* 0x1??? ---------------------------------------------------------------------- */
-
+    /// 0x1NNN - jump to address in NNN
     pub fn jump_to(&mut self, address: u16) -> Result<(), CpuError> {
         debug!("Jumping to address: 0x{:04X}", address);
         // Jump to the specified address
@@ -431,7 +431,7 @@ impl Cpu {
     }
 
     /* 0x2??? ---------------------------------------------------------------------- */
-
+    /// 0x1NNN - call routine at address NNN
     pub fn call_routine_at(&mut self, address: u16) -> Result<(), CpuError> {
         debug!("Calling subroutine at address: 0x{:04X}", address);
         // Set the program counter to the address
@@ -449,6 +449,7 @@ impl Cpu {
     }
 
     /* 0x3??? ---------------------------------------------------------------------- */
+    /// 0x3XNN skip if value in register X is equal to value NN
     pub fn skip_if_equal(&mut self, register: usize, value: u8) -> Result<(), CpuError> {
         debug!("Skipping next instruction if register {} equals {}", register, value);
         // Skip the next instruction if the value in the specified register equals the given value
@@ -465,6 +466,7 @@ impl Cpu {
     }
 
     /* 0x4??? ---------------------------------------------------------------------- */
+    /// 0x4XNN skip if value in register X is not equal to value NN
     pub fn skip_if_unequal(&mut self, register: usize, value: u8) -> Result<(), CpuError> {
         debug!("Skipping next instruction if register {} does not equal {}", register, value);
         // Skip the next instruction if the value in the specified register does not equal the given value
