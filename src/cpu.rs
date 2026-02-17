@@ -539,31 +539,44 @@ impl Cpu {
 
         // here the number is used to determine the operation
         match RegisterOperations(number) {
+            // 0x8XY0 - Set VX to the value of VY
             RegisterOperations::SetToSecond => {
                 self.set_register(register_0, value_1)?;
             },
+            // 0x8XY1 - Set VX to VX OR VY
             RegisterOperations::OrEqual => {
                 let result = value_0 | value_1;
                 self.set_register(register_0, result)?;
             },
+            // 0x8XY2 - Set VX to VX AND VY
             RegisterOperations::AndEqual => {
                 let result = value_0 & value_1;
                 self.set_register(register_0, result)?;
             },
+            // 0x8XY3 - Set VX to VX XOR VY
             RegisterOperations::XorEqual => {
                 let result = value_0 ^ value_1;
                 self.set_register(register_0, result)?;
             },
+            // 0x8XY4 - Add VY to VX. Set VF to 1 if there's a carry, otherwise 0
             RegisterOperations::AddEqual => {
                 let result = value_0.wrapping_add(value_1);
                 self.set_register(register_0, result)?;
+
+                // Set carry flag if overflow occurs
+                // this can only happen if the result overflowed the 8-bit limit
+                self.registers.set_carry_flag((result < value_0) as u8);
             },
             RegisterOperations::SubtractEqual => {
                 let result = value_0.wrapping_sub(value_1);
-
-                self.registers.set_carry_flag((value_0 >= value_1) as u8); // Set carry flag if no underflow
-
                 self.set_register(register_0, result)?;
+
+                // sometimes the carry flag should override the result (VX = VF)
+                // it's important to set this after setting the restult
+                // Set carry flag if no underflow occurs
+                // flag = 0 if underflow 1 otherwise
+                self.registers.set_carry_flag((value_0 >= value_1) as u8);
+
             },
             RegisterOperations::ShiftRightEqual => {
                 let least_significant_bit = value_0 & 0x1;
@@ -574,9 +587,14 @@ impl Cpu {
             RegisterOperations::SetToSecondMinusFirst => {
                 let result = value_1.wrapping_sub(value_0);
 
+                self.set_register(register_0, result)?;
+
+                // sometimes the carry flag should override the result (VX = VF)
+                // it's important to set this after setting the restult
+                // Set carry flag if no underflow occurs
+                // flag = 0 if underflow 1 otherwise
                 self.registers.set_carry_flag((value_1 >= value_0) as u8); // Set carry flag if no underflow
 
-                self.set_register(register_0, result)?;
             },
             RegisterOperations::ShiftLeftEqual => {
                 let most_significant_bit = (value_0 >> 7) & 0x1;
