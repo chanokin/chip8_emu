@@ -2,7 +2,7 @@ use crate::constants::{
     CodeCategories, DelayTimerType, FunctionCodes, IndexRegisterType, OpCodes, ProgramCounterType,
     RegisterOperations, SoundTimerType, VariableRegisterType, MiscellaneousOperations,
     DISPLAY_START_ADDRESS, NUMBER_OF_KEYS, PROGRAM_COUNTER_START,
-    MAP_KEY_STATE_TO_CHIP8
+    // MAP_KEY_STATE_TO_CHIP8
 };
 use crate::errors::{
     CpuError,
@@ -87,7 +87,8 @@ pub struct Cpu {
     program_counter: ProgramCounterType,
     index_register: IndexRegisterType,
     delay_timer: DelayTimerType,
-    sound_timer: SoundTimerType
+    sound_timer: SoundTimerType,
+    last_frame_key_state: [bool; NUMBER_OF_KEYS],
 }
 
 
@@ -100,7 +101,8 @@ impl Cpu {
             program_counter: PROGRAM_COUNTER_START, // CHIP-8 programs typically start at 0x200
             index_register: 0, // Initialize index register to 0
             delay_timer: 0, // Initialize delay timer to 0
-            sound_timer: 0 // Initialize sound timer to 0
+            sound_timer: 0, // Initialize sound timer to 0
+            last_frame_key_state: [false; NUMBER_OF_KEYS]
         };
 
         cpu.reset(); // Reset CPU state to ensure everything is initialized correctly
@@ -144,6 +146,7 @@ impl Cpu {
         self.index_register = 0; // Reset index register to 0
         self.delay_timer = 0; // Reset delay timer to 0
         self.sound_timer = 0; // Reset sound timer to 0
+        self.last_frame_key_state.fill(false); // Reset key state to all keys released
     }
 
     /// Decodes the instruction (16-bit) into opcode (4 bits) and arguments (12 bits).
@@ -156,7 +159,7 @@ impl Cpu {
 
     /// Executes the instruction based on the opcode (4 bits) and arguments (12 bits).
     /// The execution usually requires ram. Some
-    pub fn execute(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram, key_state: [bool; 16]) -> Result<(), CpuError> {
+    pub fn execute(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram, key_state: [bool; NUMBER_OF_KEYS]) -> Result<(), CpuError> {
         let category = match self.decoder.extraction_category(opcode) {
             Ok(cat) => cat,
             Err(e) => return Err(e),
@@ -177,7 +180,7 @@ impl Cpu {
 
 
     /// One CPU cycle: fetch, decode, and execute instruction.
-    pub fn update(&mut self, gpu: &mut Gpu, ram: &mut Ram, key_state: [bool; 16]) -> Result<(), CpuError> {
+    pub fn update(&mut self, gpu: &mut Gpu, ram: &mut Ram, key_state: [bool; NUMBER_OF_KEYS]) -> Result<(), CpuError> {
         // Fetch the next instruction from memory
         let instruction = self.fetch(ram)?;
 
@@ -197,6 +200,8 @@ impl Cpu {
         if self.sound_timer > 0 {
             self.decrease_sound_timer()?;
         }
+
+        self.last_frame_key_state = key_state; // Update the last frame key state for edge detection in key operations
 
         Ok(())
     }
@@ -307,7 +312,7 @@ impl Cpu {
         }
     }
 
-    pub fn is_key_pressed(&self, key: u8, key_state: [bool; 16]) -> bool {
+    pub fn is_key_pressed(&self, key: u8, key_state: [bool; NUMBER_OF_KEYS]) -> bool {
         // Check if a specific key is pressed
         if key < NUMBER_OF_KEYS as u8 {
             debug!("Checking if key {} is pressed: {}", key, key_state[key as usize]);
@@ -317,7 +322,7 @@ impl Cpu {
         }
     }
 
-    pub fn is_key_released(&self, key: u8, key_state: [bool; 16]) -> bool {
+    pub fn is_key_released(&self, key: u8, key_state: [bool; NUMBER_OF_KEYS]) -> bool {
         // Check if a specific key is released
         if key < NUMBER_OF_KEYS as u8 {
             debug!("Checking if key {} is released: {}", key, !key_state[key as usize]);
@@ -328,20 +333,21 @@ impl Cpu {
     }
 
     /// Dispatch functions based on instruction categories with a 12-bit number (NNN)
-    pub fn nnn(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram, _key_state: [bool; 16]) -> Result<(), CpuError> {
+    pub fn nnn(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram, _key_state: [bool; NUMBER_OF_KEYS]) -> Result<(), CpuError> {
         debug!("\tExecuting opcode: 0x{:02X} in category: NNN with args: 0x{:04X}", opcode, args);
         match OpCodes(opcode)  {
             OpCodes::Zero => self.zero(args, gpu, ram), // 0x0NNN
             OpCodes::Jump => self.jump_to(args), // 0x1NNN
             OpCodes::CallSubroutine => self.call_routine_at(args), // 0x2NNN
             OpCodes::SetIndex => self.set_index_register(args), // 0xANNN
+            OpCodes::JumpWithOffset => self.jump_address_plus_v0(args), // 0xBNNN
             _ => Err(CpuError::InvalidOpcode("NNN dispatch", opcode)),
         }
 
     }
 
     /// Dispatch functions with an 8-bit number (NN) and a register (X)
-    pub fn xnn(&mut self, opcode: u8, args: u16, _gpu: &mut Gpu, ram: &mut Ram, key_state: [bool; 16]) -> Result<(), CpuError> {
+    pub fn xnn(&mut self, opcode: u8, args: u16, _gpu: &mut Gpu, ram: &mut Ram, key_state: [bool; NUMBER_OF_KEYS]) -> Result<(), CpuError> {
         // Extract the register and number from the arguments
         let (register, number) = self.decoder.xnn(args);
 
@@ -359,7 +365,7 @@ impl Cpu {
     }
 
     /// Dispatch functions with two registers (X, Y) and a number (N)
-    pub fn xyn(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram, _key_state: [bool; 16]) -> Result<(), CpuError> {
+    pub fn xyn(&mut self, opcode: u8, args: u16, gpu: &mut Gpu, ram: &mut Ram, _key_state: [bool; NUMBER_OF_KEYS]) -> Result<(), CpuError> {
         debug!("Executing opcode: 0x{:01X} in category: XYN with args: 0x{:03X}", opcode, args);
         // Extract the two registers and the number from the arguments
         let (register_0, register_1, number) = self.decoder.xyn(args);
@@ -650,7 +656,7 @@ impl Cpu {
 
     /* 0xB??? ---------------------------------------------------------------------- */
 
-    pub fn jump_addres_plus_v0(&mut self, address: u16) -> Result<(), CpuError> {
+    pub fn jump_address_plus_v0(&mut self, address: u16) -> Result<(), CpuError> {
         // Jump to the address specified by the offset from the index register
         let address = self.get_register_value(0)? as u16 + (address & 0x0FFF);
 
@@ -699,7 +705,7 @@ impl Cpu {
     }
 
     /* 0xE??? ---------------------------------------------------------------------- */
-    pub fn key_operations(&mut self, register: usize, func_code: u8, key_state: [bool; 16]) -> Result<(), CpuError> {
+    pub fn key_operations(&mut self, register: usize, func_code: u8, key_state: [bool; NUMBER_OF_KEYS]) -> Result<(), CpuError> {
         let value_0 = self.get_register_value(register)?;
         // Handle key operations based on the opcode
         match FunctionCodes(func_code) {
@@ -709,7 +715,7 @@ impl Cpu {
         }
     }
 
-    pub fn skip_if_key_pressed(&mut self, key_id: VariableRegisterType, key_state: [bool; 16]) -> Result<(), CpuError> {
+    pub fn skip_if_key_pressed(&mut self, key_id: VariableRegisterType, key_state: [bool; NUMBER_OF_KEYS]) -> Result<(), CpuError> {
         debug!("Skipping next instruction if key {} is pressed", key_id);
         // Skip the next instruction if the key corresponding to the value in the specified register is pressed
         if self.is_key_pressed(key_id, key_state) {
@@ -719,7 +725,7 @@ impl Cpu {
         Ok(())
     }
 
-    pub fn skip_if_key_not_pressed(&mut self, key_id: VariableRegisterType, key_state: [bool; 16]) -> Result<(), CpuError> {
+    pub fn skip_if_key_not_pressed(&mut self, key_id: VariableRegisterType, key_state: [bool; NUMBER_OF_KEYS]) -> Result<(), CpuError> {
         debug!("Skipping next instruction if key {} is not pressed", key_id);
         // Skip the next instruction if the key corresponding to the value in the specified register is not pressed
         if self.is_key_released(key_id, key_state) {
@@ -732,7 +738,7 @@ impl Cpu {
 
     /* 0xF??? ---------------------------------------------------------------------- */
 
-    pub fn miscellaneous(&mut self, register: usize, func_code: u8, _ram: &mut Ram, key_state: [bool; 16]) -> Result<(), CpuError> {
+    pub fn miscellaneous(&mut self, register: usize, func_code: u8, _ram: &mut Ram, key_state: [bool; NUMBER_OF_KEYS]) -> Result<(), CpuError> {
         // Handle miscellaneous operations based on the opcode
         match MiscellaneousOperations(func_code) {
             MiscellaneousOperations::GetDelay => self.set_reg_to_delay(register), // 0xFX07
@@ -755,13 +761,12 @@ impl Cpu {
     }
 
     /// FX0A - Wait for a key press, store the value of the key in Vx
-    pub fn set_reg_to_key(&mut self, _register: usize, _key_state: [bool; 16]) -> Result<(), CpuError> {
+    pub fn set_reg_to_key(&mut self, _register: usize, _key_state: [bool; NUMBER_OF_KEYS]) -> Result<(), CpuError> {
         // block until a key is pressed and set the register to the key value
-        // todo!("not entirely sure I got this right");
         debug!("Setting register {} to key value: {}", _register, 0);
         for (i, &pressed) in _key_state.iter().enumerate() {
-            if pressed {
-                debug!("Key {} is pressed, setting register {} to {}", i, _register, i);
+            if ! pressed && self.last_frame_key_state[i] {
+                debug!("Key {} is pressed/released, setting register {} to {}", i, _register, i);
                 return self.set_register(_register, i as u8);
             }
         }

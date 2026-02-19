@@ -111,9 +111,12 @@ impl Gpu {
         // the bool in the return type indicates that we need to set VF as 1 because
         // a screen pixel was on and the sprite pixel was also on
 
-        if x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT {
-            return Err(DisplayError::CoordinateError(x, y));
-        }
+        // if x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT {
+        //     return Err(DisplayError::CoordinateError(x, y));
+        // }
+
+        let x = x % DISPLAY_WIDTH; // Wrap around horizontally
+        let y = y % DISPLAY_HEIGHT; // Wrap around vertically
 
         let sprite: Vec<u8> = match ram.get_range(sprite_address, sprite_height as usize) {
             Ok(data) => data,
