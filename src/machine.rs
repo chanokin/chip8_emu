@@ -125,16 +125,16 @@ impl Machine {
     }
 
     pub fn frame_buffer(&self) -> Vec<u32> {
-        // self.gpu.buffer_as_u8(&self.ram)
-        //         .unwrap()
-        //         .iter()
-        //         .flatten()
-        //         .map(|&pixel| if pixel > 0 { 0xFFFFFF } else { 0x000000 })
-        //         .collect()
-        self.gpu.buffer_as_u8()
-            .iter()
-            .map(|&pixel| if pixel > 0 { 0xFFFFFF } else { 0x000000 })
-            .collect()
+        self.gpu.buffer_as_u8_matrix(&self.ram)
+                .unwrap()
+                .iter()
+                .flatten()
+                .map(|&pixel| if pixel > 0 { 0xFFFFFF } else { 0x000000 })
+                .collect()
+        // self.gpu.buffer_as_u8()
+        //     .iter()
+        //     .map(|&pixel| if pixel > 0 { 0xFFFFFF } else { 0x000000 })
+        //     .collect()
     }
 
 }
