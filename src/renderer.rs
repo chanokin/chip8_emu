@@ -13,7 +13,7 @@ impl Show for TextRenderer {
     fn show(&self, gpu: &Gpu, ram: &Ram) -> Result<(), String> {
         // Implement text rendering logic here
 
-        let output_buffer = match gpu.buffer_as_u8(ram) {
+        let output_buffer = match gpu.buffer_as_u8_matrix(ram) {
             Ok(buffer) => buffer,
             Err(e) => return Err(format!("Failed to get GPU buffer: {}", e)),
         };

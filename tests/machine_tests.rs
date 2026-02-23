@@ -123,7 +123,7 @@ mod tests {
             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
         ];
-        let image = machine.gpu.buffer_as_u8(&machine.ram).expect("should be able to get GPU buffer");
+        let image = machine.gpu.buffer_as_u8_matrix(&machine.ram).expect("should be able to get GPU buffer");
 
         for (_row_idx, row) in image.iter().enumerate() {
             for (_col_idx, pixel) in row.iter().enumerate() {

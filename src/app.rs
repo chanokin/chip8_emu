@@ -17,6 +17,8 @@ impl App {
     }
 
     pub fn run(&mut self) -> Result<(), String> {
+        let mut trigger_redraw: bool = true;
+
         self.machine.reset();
         // let mut rom =
         let mut rom_loaded = false; //
@@ -35,6 +37,7 @@ impl App {
                         self.machine.load_program(&program).expect("Failed to load ROM into machine");
                         println!("ROM loaded successfully!");
                         rom_loaded = true;
+                        trigger_redraw = true; // Force redraw to show the new ROM's initial state
                     },
                     Err(e) => println!("Failed to load ROM: {}", e),
                 }
@@ -44,16 +47,20 @@ impl App {
                 rom_loaded = false;
                 self.machine.reset();
                 println!("Machine reset!");
+                trigger_redraw = true; // Force redraw to show the reset state
             }
 
             // Chip-8 uses a 16-key pad. Check state of each:
             let keys_pressed = self.gui.key_state();
 
             if rom_loaded {
-                self.machine.step(keys_pressed)
+                // println!("Keys pressed: {:?}", keys_pressed);
+                trigger_redraw = self.machine.step(keys_pressed)
                     .expect(&format!("\n\nFailed to execute step {}\n\t", loop_index)); // Handle errors properly in production code
 
-                buffer = self.machine.frame_buffer();
+                if trigger_redraw {
+                    buffer = self.machine.frame_buffer();
+                }
 
             } else {
                 for (i, pixel) in buffer.iter_mut().enumerate() {
@@ -61,7 +68,12 @@ impl App {
                 }
             }
 
-            self.gui.update_with_buffer(&buffer).expect("Failed to update GUI buffer");
+            if trigger_redraw {
+                self.gui.update_with_buffer(&buffer).expect("Failed to update GUI buffer");
+                trigger_redraw = false; // Reset the flag until the next step indicates a redraw is needed
+            } else {
+                self.gui.update();
+            }
 
             loop_index += 1;
 

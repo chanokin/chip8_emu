@@ -79,15 +79,15 @@ impl Machine {
         Ok(())
     }
 
-    pub fn step(&mut self, key_state: [bool; 16]) -> Result<(), MachineError> {
+    pub fn step(&mut self, key_state: [bool; 16]) -> Result<bool, MachineError> {
             let cpu: &mut Cpu = &mut self.cpu;
             let gpu: &mut Gpu = &mut self.gpu;
             let ram: &mut Ram = &mut self.ram;
 
-            match cpu.update(gpu, ram, key_state) {
-                Ok(_) => {},
+            let trigger_redraw = match cpu.update(gpu, ram, key_state) {
+                Ok(trigger) => trigger,
                 Err(e) => return Err(MachineError::CpuError(e)),
-            }
+            };
 
             if cpu.get_sound_timer() > 0 {
                 debug!("Sound timer: {}", cpu.get_sound_timer());
@@ -97,7 +97,7 @@ impl Machine {
                 self.buzzer.turn_off();
             }
 
-            Ok(())
+            Ok(trigger_redraw)
 
     }
 
@@ -125,12 +125,16 @@ impl Machine {
     }
 
     pub fn frame_buffer(&self) -> Vec<u32> {
-        self.gpu.buffer_as_u8(&self.ram)
-                .unwrap()
-                .iter()
-                .flatten()
-                .map(|&pixel| if pixel > 0 { 0xFFFFFF } else { 0x000000 })
-                .collect()
+        // self.gpu.buffer_as_u8(&self.ram)
+        //         .unwrap()
+        //         .iter()
+        //         .flatten()
+        //         .map(|&pixel| if pixel > 0 { 0xFFFFFF } else { 0x000000 })
+        //         .collect()
+        self.gpu.buffer_as_u8()
+            .iter()
+            .map(|&pixel| if pixel > 0 { 0xFFFFFF } else { 0x000000 })
+            .collect()
     }
 
 }

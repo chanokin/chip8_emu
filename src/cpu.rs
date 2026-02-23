@@ -180,7 +180,7 @@ impl Cpu {
 
 
     /// One CPU cycle: fetch, decode, and execute instruction.
-    pub fn update(&mut self, gpu: &mut Gpu, ram: &mut Ram, key_state: [bool; NUMBER_OF_KEYS]) -> Result<(), CpuError> {
+    pub fn update(&mut self, gpu: &mut Gpu, ram: &mut Ram, key_state: [bool; NUMBER_OF_KEYS]) -> Result<bool, CpuError> {
         // Fetch the next instruction from memory
         let instruction = self.fetch(ram)?;
 
@@ -189,6 +189,15 @@ impl Cpu {
 
         debug!("-> Executing instruction at PC: {} -> Opcode: 0x{:02X}, Args: 0x{:04X}",
                  self.program_counter, opcode, args);
+
+
+        let is_draw_opcode = matches!(OpCodes(opcode), OpCodes::Draw); // 0xDXYN is the draw instruction
+        let is_clear_screen_instruction = (
+            matches!(OpCodes(opcode), OpCodes::Zero) &&
+            matches!(FunctionCodes((args & 0x00FF) as u8), FunctionCodes::ClearDisplay)
+        ); // 0x00E0 is the clear screen instruction
+
+        let trigger_redraw = is_draw_opcode || is_clear_screen_instruction; // Only trigger redraw for draw and clear screen instructions
 
         // Execute the instruction
         self.execute(opcode, args, gpu, ram, key_state)?;
@@ -203,7 +212,7 @@ impl Cpu {
 
         self.last_frame_key_state = key_state; // Update the last frame key state for edge detection in key operations
 
-        Ok(())
+        Ok(trigger_redraw)
     }
 
     pub fn set_program_counter(&mut self, value: ProgramCounterType) -> Result<(), CpuError> {

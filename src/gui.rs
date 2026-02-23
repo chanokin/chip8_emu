@@ -67,6 +67,9 @@ impl GUI {
         Ok(())
     }
 
+    pub fn update(&mut self) {
+        self.window.update();
+    }
 
     pub fn trigger_open_rom(&self) -> bool {
         self.window.is_key_pressed(Key::O, minifb::KeyRepeat::No)

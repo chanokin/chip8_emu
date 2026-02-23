@@ -10,7 +10,9 @@ use crate::constants::{
 use crate::errors::DisplayError;
 use crate::ram::Ram;
 
-pub struct Gpu;
+pub struct Gpu {
+    buffer: Vec<u8>, // This will hold the pixel data for the display
+}
 
 pub fn coord_to_indices(x: usize, y: usize) -> Result<(usize, usize), DisplayError> {
     if x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT {
@@ -32,11 +34,14 @@ pub fn coord_to_indices(x: usize, y: usize) -> Result<(usize, usize), DisplayErr
 impl Gpu {
 
     pub fn new() -> Self {
-        Gpu{}
+        Gpu{
+            buffer: vec![0; DISPLAY_WIDTH * DISPLAY_HEIGHT], // Initialize the buffer with all pixels off
+        }
     }
 
     pub fn reset(&mut self, ram: &mut Ram) -> Result<(), DisplayError> {
         self.clear(ram)?;
+        self.buffer.fill(0); // Reset the GPU buffer
 
         Ok(())
     }
@@ -65,11 +70,14 @@ impl Gpu {
             Err(_) => return Err(DisplayError::CoordinateError(x, y)),
         };
 
-        let new_value = if value == 1{
-            current_value | (1 << bit_index) // Set the pixel to 1
+        self.buffer[y * DISPLAY_WIDTH + x] = value; // Update the GPU buffer
+
+        let new_value: u8 = if value == 1 {
+            current_value | 1 << bit_index // Set the pixel to 1
         } else {
             current_value & !(1 << bit_index) // Set the pixel to 0
         };
+
 
         match ram.set(byte_index, new_value) {
             Ok(_) => Ok(()),
@@ -155,12 +163,16 @@ impl Gpu {
         Ok(set_vf_to_true)
     }
 
+    pub fn buffer_as_u8(&self) -> Vec<u8> {
+        self.buffer.clone() // Return a copy of the buffer as a flat vector of u8
+    }
 
-    pub fn buffer_as_u8(&self, ram: &Ram) -> Result<Vec<Vec<u8>>, DisplayError> {
-        let mut buffer = Vec::with_capacity(DISPLAY_HEIGHT);
+    pub fn buffer_as_u8_matrix(&self, ram: &Ram) -> Result<Vec<Vec<u8>>, DisplayError> {
+        let mut buffer: Vec<Vec<u8>> = Vec::with_capacity(DISPLAY_HEIGHT);
 
-        let mut row_idx = 0;
-        let mut col_idx = 0;
+        let mut row_idx: usize = 0;
+        let mut col_idx: usize = 0;
+
         for index in DISPLAY_START_ADDRESS..DISPLAY_END_ADDRESS {
 
             if row_idx >= DISPLAY_HEIGHT {
@@ -170,11 +182,13 @@ impl Gpu {
             match ram.get(index) {
                 Ok(value) => {
                     for bit in (0..8).rev() {
+                        // if we haven't added a row to the buffer for the current row index, add it
                         if buffer.len() <= row_idx {
                             buffer.push(vec![0; DISPLAY_WIDTH]);
                         }
 
-                        let pixel_value = (value >> bit) & 1;
+                        // get the actual value for this pixel
+                        let pixel_value = (value >> bit) & 1u8;
                         buffer[row_idx][col_idx] = pixel_value;
 
                         col_idx += 1;
