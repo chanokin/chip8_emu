@@ -41,7 +41,6 @@ impl Gpu {
 
     pub fn reset(&mut self, ram: &mut Ram) -> Result<(), DisplayError> {
         self.clear(ram)?;
-        self.buffer.fill(0); // Reset the GPU buffer
 
         Ok(())
     }
@@ -53,6 +52,7 @@ impl Gpu {
                 return Err(DisplayError::ClearFailed);
             }
         }
+        self.buffer.fill(0); // Reset the GPU buffer
 
         Ok(())
 
