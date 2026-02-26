@@ -11,7 +11,7 @@ use crate::errors::DisplayError;
 use crate::ram::Ram;
 
 pub struct Gpu {
-    buffer: Vec<u8>, // This will hold the pixel data for the display
+    pub buffer: Vec<u32>, // This will hold the pixel data for the display
 }
 
 pub fn coord_to_indices(x: usize, y: usize) -> Result<(usize, usize), DisplayError> {
@@ -70,7 +70,7 @@ impl Gpu {
             Err(_) => return Err(DisplayError::CoordinateError(x, y)),
         };
 
-        self.buffer[y * DISPLAY_WIDTH + x] = value; // Update the GPU buffer
+        self.buffer[y * DISPLAY_WIDTH + x] = (value as u32) * 0xFFFFFF; // Update the GPU buffer
 
         let new_value: u8 = if value == 1 {
             current_value | 1 << bit_index // Set the pixel to 1
@@ -163,9 +163,6 @@ impl Gpu {
         Ok(set_vf_to_true)
     }
 
-    pub fn buffer_as_u8(&self) -> Vec<u8> {
-        self.buffer.clone() // Return a copy of the buffer as a flat vector of u8
-    }
 
     pub fn buffer_as_u8_matrix(&self, ram: &Ram) -> Result<Vec<Vec<u8>>, DisplayError> {
         let mut buffer: Vec<Vec<u8>> = Vec::with_capacity(DISPLAY_HEIGHT);
