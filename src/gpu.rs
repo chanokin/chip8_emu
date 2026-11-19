@@ -126,10 +126,13 @@ impl Gpu {
         let x = x % DISPLAY_WIDTH; // Wrap around horizontally
         let y = y % DISPLAY_HEIGHT; // Wrap around vertically
 
-        let sprite: Vec<u8> = match ram.get_range(sprite_address, sprite_height as usize) {
+        let mut sprite_buf = [0u8; 16];
+        let sprite_slice: &[u8] = match ram.get_range(sprite_address, sprite_height as usize) {
             Ok(data) => data,
             Err(e) => return Err(DisplayError::MemoryError(e)), // Handle memory error
         };
+        sprite_buf[..sprite_slice.len()].copy_from_slice(sprite_slice);
+        let sprite = &sprite_buf[..sprite_slice.len()];
 
         let mut set_vf_to_true = false;
         for (row_index, &sprite_row) in sprite.iter().enumerate() {
@@ -147,6 +150,18 @@ impl Gpu {
 
                 let sprite_pixel_value = (sprite_row >> (7 - bit_index)) & 1;
                 let current_pixel_value = self.get_pixel(pixel_x, pixel_y, ram)?;
+
+                // this could be done only in the gpu buffer but for consistency
+                // I kept the latter version of the code
+                // if (sprite_row & (0x80 >> bit_index)) != 0 {
+                //     let buffer_idx = pixel_y * DISPLAY_WIDTH + pixel_x;
+                //     if self.buffer[buffer_idx] == 0xFFFFFF {
+                //         set_vf_to_true = true;
+                //         self.buffer[buffer_idx] = 0;
+                //     } else {
+                //         self.buffer[buffer_idx] = 0xFFFFFF;
+                //     }
+                // }
 
                 if current_pixel_value > 0 && sprite_pixel_value == 1{
                     // If the pixel is already set and we are trying to set it again, we will flip it
