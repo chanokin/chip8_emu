@@ -1,8 +1,19 @@
 use crate::constants::{
-    CodeCategories, DelayTimerType, FunctionCodes, IndexRegisterType, OpCodes, ProgramCounterType,
-    RegisterOperations, SoundTimerType, VariableRegisterType, MiscellaneousOperations,
-    DISPLAY_START_ADDRESS, NUMBER_OF_KEYS, PROGRAM_COUNTER_START,
-    // MAP_KEY_STATE_TO_CHIP8
+    CodeCategories,
+    DISPLAY_START_ADDRESS,
+    DelayTimerType,
+    FONT_CHAR_HEIGHT,
+    FONT_START_ADDRESS,
+    FunctionCodes,
+    IndexRegisterType,
+    MiscellaneousOperations,
+    NUMBER_OF_KEYS,
+    OpCodes,
+    PROGRAM_COUNTER_START,
+    ProgramCounterType,
+    RegisterOperations,
+    SoundTimerType,
+    VariableRegisterType,
 };
 use crate::errors::{
     CpuError,
@@ -824,12 +835,9 @@ impl Cpu {
     /// FX29 - Set the index register to the address of the character corresponding to the value in the specified register
     pub fn set_index_reg_to_char(&mut self, register: usize) -> Result<(), CpuError> {
         // todo!("not entirely sure I got this right");
-        let value = self.get_register_value(register)?;
-
-        debug!("Setting index register to character address for register {} value: {}", register, value);
-
-        self.index_register = (value & 0xF) as IndexRegisterType;
-
+        let char_digit = (self.get_register_value(register)? & 0x0F) as IndexRegisterType;
+        // Each hex digit font sprite takes 5 bytes in RAM starting at FONT_START_ADDRESS
+        self.index_register = FONT_START_ADDRESS as IndexRegisterType + (char_digit * FONT_CHAR_HEIGHT);
         Ok(())
     }
 

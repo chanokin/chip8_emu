@@ -91,10 +91,10 @@ impl Machine {
 
             if cpu.get_sound_timer() > 0 {
                 debug!("Sound timer: {}", cpu.get_sound_timer());
-                self.buzzer.turn_on();
+                let _ = self.buzzer.turn_on();
 
             } else {
-                self.buzzer.turn_off();
+                let _ = self.buzzer.turn_off();
             }
 
             Ok(trigger_redraw)
@@ -124,8 +124,9 @@ impl Machine {
         Ok(())
     }
 
-    pub fn frame_buffer(&self) -> Vec<u32> {
-        self.gpu.buffer.clone()
+    #[inline]
+    pub fn frame_buffer(&self) -> &[u32] {
+        &self.gpu.buffer
     }
 
 }

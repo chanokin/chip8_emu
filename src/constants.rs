@@ -31,6 +31,7 @@ pub static DISPLAY_SIZE: usize = DISPLAY_END_ADDRESS - DISPLAY_START_ADDRESS; //
 pub static FONT_START_ADDRESS: usize = 0x050; // 80 in decimal
 pub static FONT_END_ADDRESS: usize = 0x0A0; // 160 in decimal
 // pub static FONT_SIZE: usize = FONT_END_ADDRESS - FONT_START_ADDRESS;
+pub static FONT_CHAR_HEIGHT: IndexRegisterType = 5;
 
 pub static PROGRAM_COUNTER_START: ProgramCounterType = 0x200; // CHIP-8 programs typically start at 0x200
 
@@ -41,7 +42,7 @@ pub static LOWER_NIBBLE_MASK: u8 = 0x0F; // Mask for the lower nibble
 
 pub static OPCODE_MASK: u16 = 0xF000; // Mask for the opcode (upper 4 bits)
 
-
+pub static CYCLES_PER_FRAME: usize = 10; // ~600 Hz clock speed
 
 // the opcode requires a single 12-bit number from the instruction
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]

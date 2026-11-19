@@ -28,17 +28,17 @@ impl Ram {
         Ok(self.memory[address])
     }
 
-    pub fn get_range(&self, address: u16, size: usize) -> Result<Vec<MemoryType>, MemoryError> {
+    pub fn get_range(&self, address: u16, size: usize) -> Result<&[MemoryType], MemoryError> {
         let address = address as usize;
         if address >= MEMORY_SIZE {
             return Err(MemoryError::OutOfBounds);
         }
-
-        if address + size > MEMORY_SIZE {
+        let end = address as usize + size;
+        if end > MEMORY_SIZE {
             return Err(MemoryError::OutOfBounds);
         }
 
-        Ok(self.memory[address..address + size].to_vec())
+        Ok(&self.memory[address..address + size])
     }
 
     pub fn set_range_font(&mut self, address: u16, size: usize, values: &[u8]) -> Result<(), MemoryError> {

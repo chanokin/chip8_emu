@@ -3,6 +3,7 @@ use rodio::source::{SineWave, Source};
 use std::time::Duration;
 use crate::errors::BuzzerError;
 
+#[allow(dead_code)]
 pub struct Buzzer {
     is_on: bool,
     stream_handle: rodio::OutputStream,
